@@ -9,6 +9,9 @@ load_dotenv()
 # The default URL will point to our local docker-compose postgres DB
 DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://postgres:postgrespassword@localhost:5432/ticketing")
 
+if DATABASE_URL and DATABASE_URL.startswith("postgresql://"):
+    DATABASE_URL = DATABASE_URL.replace("postgresql://", "postgresql+pg8000://", 1)
+
 from sqlalchemy.pool import NullPool
 
 # Use NullPool for serverless environments to prevent dead connection leaks
