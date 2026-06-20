@@ -49,14 +49,18 @@ export function ChangePasswordDialog({ children }: { children?: React.ReactNode 
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        {children || (
-          <Button variant="outline" className="w-full justify-start text-slate-600 hover:text-slate-900">
-            <KeyRound className="w-4 h-4 mr-2" />
-            Change Password
-          </Button>
-        )}
-      </DialogTrigger>
+      <DialogTrigger 
+        render={
+          children ? (
+            <>{children}</>
+          ) : (
+            <Button variant="outline" className="w-full justify-start text-slate-600 hover:text-slate-900">
+              <KeyRound className="w-4 h-4 mr-2" />
+              Change Password
+            </Button>
+          )
+        } 
+      />
       <DialogContent className="sm:max-w-[425px]">
         <form onSubmit={handleSubmit}>
           <DialogHeader>
