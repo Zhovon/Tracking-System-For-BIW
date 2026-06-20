@@ -12,7 +12,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { CreateTicketDialog } from "@/components/CreateTicketDialog";
 import { Input } from "@/components/ui/input";
-
+import { supabase } from "@/lib/supabase";
 function DashboardContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -26,6 +26,34 @@ function DashboardContent() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const queryClient = useQueryClient();
 
+  // Supabase Realtime for Tickets and Messages
+  useEffect(() => {
+    const channel = supabase.channel('dashboard_changes')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'messages' },
+        () => {
+          if (ticketId) {
+            queryClient.invalidateQueries({ queryKey: ["ticket", ticketId] });
+          }
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'tickets' },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ["tickets"] });
+          if (ticketId) {
+            queryClient.invalidateQueries({ queryKey: ["ticket", ticketId] });
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [ticketId, queryClient]);
   const { data: fetchedTickets, isLoading, error } = useQuery({
     queryKey: ["tickets", roomId, filterStaffId],
     queryFn: () => fetchTickets({

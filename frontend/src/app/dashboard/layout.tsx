@@ -64,6 +64,25 @@ export default function DashboardLayout({
   const [mobileRoomsOpen, setMobileRoomsOpen] = useState(false);
   const [mobileProfileOpen, setMobileProfileOpen] = useState(false);
 
+  // Supabase Realtime for Notifications
+  useEffect(() => {
+    if (!currentUser) return;
+    
+    const channel = supabase.channel('notifications_changes')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'notifications', filter: `user_id=eq.${currentUser.id}` },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ["notifications"] });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [currentUser, queryClient]);
+
   const handleLogout = async () => {
     await supabase.auth.signOut();
     router.push("/login");
