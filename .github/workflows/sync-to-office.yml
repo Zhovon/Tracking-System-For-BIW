@@ -18,5 +18,5 @@ jobs:
         env:
           OFFICE_TOKEN: ${{ secrets.OFFICE_GITHUB_TOKEN }}
         run: |
-          git remote add office https://x-access-token:${OFFICE_TOKEN}@github.com/beautyintelligent3-maker/Protocol.git
+          git remote add office https://x-access-token:${OFFICE_TOKEN}@github.com/beautyintelligent3-maker/tracking-system-for-biw.git
           git push office main --force
