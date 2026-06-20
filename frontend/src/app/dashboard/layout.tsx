@@ -8,7 +8,7 @@ import { supabase } from "@/lib/supabase";
 import { LayoutDashboard, Users, User, Loader2, Bell, CheckCircle2, UserPlus, LogOut, Menu, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
-
+import { ChangePasswordDialog } from "@/components/ChangePasswordDialog";
 export default function DashboardLayout({
   children,
 }: {
@@ -209,9 +209,18 @@ export default function DashboardLayout({
             <span className="text-sm font-medium text-slate-800">{currentUser?.name}</span>
             <span className="text-xs text-slate-500 capitalize">{currentUser?.role.replace('_', ' ')}</span>
           </div>
-          <Button variant="ghost" size="icon" onClick={handleLogout} className="text-slate-500 hover:text-slate-900 hover:bg-slate-200">
-            <LogOut className="h-4 w-4" />
-          </Button>
+          </div>
+          <div className="flex gap-1">
+            <ChangePasswordDialog>
+              <Button variant="ghost" size="icon" className="text-slate-500 hover:text-slate-900 hover:bg-slate-200" title="Change Password">
+                <LogOut className="h-4 w-4 hidden" /> {/* Dummy to keep sizing */}
+                <svg xmlns="http://www.财富.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-key-round"><path d="M2 18v3c0 .6.4 1 1 1h4v-3h3v-3h2l1.4-1.4a6.5 6.5 0 1 0-4-4Z"/><circle cx="16.5" cy="7.5" r=".5"/></svg>
+              </Button>
+            </ChangePasswordDialog>
+            <Button variant="ghost" size="icon" onClick={handleLogout} className="text-slate-500 hover:text-red-600 hover:bg-red-50" title="Log Out">
+              <LogOut className="h-4 w-4" />
+            </Button>
+          </div>
         </div>
       </aside>
 
@@ -300,9 +309,12 @@ export default function DashboardLayout({
             <h2 className="text-lg font-bold text-slate-800">{currentUser?.name}</h2>
             <p className="text-sm text-slate-500 capitalize mb-6">{currentUser?.role.replace('_', ' ')}</p>
             
-            <Button onClick={handleLogout} className="w-full bg-slate-900 text-white rounded-xl h-12">
-              <LogOut className="w-4 h-4 mr-2" /> Log Out
-            </Button>
+            <div className="w-full space-y-2">
+              <ChangePasswordDialog />
+              <Button onClick={handleLogout} className="w-full bg-slate-900 text-white rounded-xl h-12 hover:bg-slate-800 transition-colors">
+                <LogOut className="w-4 h-4 mr-2" /> Log Out
+              </Button>
+            </div>
           </div>
         </div>
       )}
