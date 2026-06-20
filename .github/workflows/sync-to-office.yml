@@ -1,0 +1,22 @@
+name: Sync to Office GitHub
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Sync to Office Repository
+        env:
+          OFFICE_TOKEN: ${{ secrets.OFFICE_GITHUB_TOKEN }}
+        run: |
+          git remote add office https://x-access-token:${OFFICE_TOKEN}@github.com/beautyintelligent3-maker/Protocol.git
+          git push office main --force
