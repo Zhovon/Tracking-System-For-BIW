@@ -22,6 +22,11 @@ This guide covers everything you need to know about navigating the system, manag
 ### Logging In
 To access BIW OS, visit the login page and enter your registered email address and password. If you do not have an account, you must contact the Owner or HR to have one created for you.
 
+**Initial Owner Account (Default Credentials):**
+- **Email:** `owner@biw.com`
+- **Password:** `password123`
+*(Note: Please change this password immediately after your first login!)*
+
 ### Changing Your Password
 If you know your password but want to change it:
 1. Log in to your Dashboard.
