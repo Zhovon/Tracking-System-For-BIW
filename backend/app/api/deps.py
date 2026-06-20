@@ -31,20 +31,21 @@ def get_current_user(
             detail="SUPABASE_JWT_SECRET is not configured on the server",
         )
 
-    from supabase import create_client, Client
-    supabase_url = os.getenv("SUPABASE_URL")
-    supabase_key = os.getenv("SUPABASE_SERVICE_ROLE_KEY")
-    supabase: Client = create_client(supabase_url, supabase_key)
-
     try:
-        user_res = supabase.auth.get_user(token)
-        if not user_res or not user_res.user:
+        # Fast, synchronous local JWT validation (No network request needed!)
+        payload = jwt.decode(
+            token, 
+            jwt_secret, 
+            algorithms=["HS256"], 
+            options={"verify_aud": False} # Supabase aud can be 'authenticated' or others
+        )
+        user_id_str = payload.get("sub")
+        if not user_id_str:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Invalid authentication token: missing subject",
             )
-        user_id_str = user_res.user.id
-        
+            
         import uuid
         try:
             user_id = uuid.UUID(user_id_str)
@@ -55,8 +56,8 @@ def get_current_user(
                 detail="Invalid authentication token: malformed subject",
             )
             
-    except Exception as e:
-        print(f"Supabase auth failed: {str(e)}")
+    except JWTError as e:
+        print(f"JWT validation failed: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=f"Could not validate credentials: {str(e)}",

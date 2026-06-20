@@ -100,11 +100,13 @@ function DashboardContent() {
     queryFn: fetchAllUsers,
   });
 
-  const [currentUserEmail, setCurrentUserEmail] = useState("alice@example.com");
+  const [currentUserEmail, setCurrentUserEmail] = useState("");
   useEffect(() => {
-    if (typeof window !== "undefined") {
-      setCurrentUserEmail(localStorage.getItem("mock_user") || "alice@example.com");
-    }
+    supabase.auth.getUser().then(({ data }) => {
+      if (data.user?.email) {
+        setCurrentUserEmail(data.user.email);
+      }
+    });
   }, []);
   
   const currentUserRole = allUsers?.find((u: any) => u.email === currentUserEmail)?.role || "";
@@ -157,9 +159,7 @@ function DashboardContent() {
               </Badge>
             )}
           </div>
-          {["owner", "manager", "hr", "it_team"].includes(currentUserRole) && (
-            <CreateTicketDialog roomId={roomId} />
-          )}
+          <CreateTicketDialog roomId={roomId} />
         </div>
 
         <div className="p-4 border-b border-slate-200 space-y-3 bg-slate-50">
