@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { fetchTickets, fetchTicketDetails, postMessage, updateTicket, fetchAllUsers, fetchAllRooms, approveTicket } from "@/lib/api";
+import { fetchTickets, fetchTicketDetails, postMessage, updateTicket, fetchAllUsers, fetchAllRooms, approveTicket, fetchCurrentUser } from "@/lib/api";
 import { useSearchParams, useRouter } from "next/navigation";
 import { Suspense, useState, useEffect } from "react";
 import { Loader2, Ticket, MessageSquare, Send, CheckCircle2, AlertCircle, ArrowLeft, Paperclip, Download, X, Search, Calendar } from "lucide-react";
@@ -100,16 +100,12 @@ function DashboardContent() {
     queryFn: fetchAllUsers,
   });
 
-  const [currentUserEmail, setCurrentUserEmail] = useState("");
-  useEffect(() => {
-    supabase.auth.getUser().then(({ data }) => {
-      if (data.user?.email) {
-        setCurrentUserEmail(data.user.email);
-      }
-    });
-  }, []);
+  const { data: currentUser } = useQuery({
+    queryKey: ["currentUser"],
+    queryFn: fetchCurrentUser,
+  });
   
-  const currentUserRole = allUsers?.find((u: any) => u.email === currentUserEmail)?.role || "";
+  const currentUserRole = currentUser?.role || "";
 
   const approveTicketMutation = useMutation({
     mutationFn: () => approveTicket(ticketId as string),
@@ -158,9 +154,9 @@ function DashboardContent() {
                 Filtered
               </Badge>
             )}
-          </div>
-          <CreateTicketDialog roomId={roomId} />
-        </div>
+          {["owner", "manager", "hr", "it_team"].includes(currentUserRole) && (
+            <CreateTicketDialog roomId={roomId} />
+          )}
 
         <div className="p-4 border-b border-slate-200 space-y-3 bg-slate-50">
           <div className="relative">
