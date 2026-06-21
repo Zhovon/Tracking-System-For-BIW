@@ -87,7 +87,8 @@ def create_ticket(
         description=ticket_in.description,
         priority=ticket_in.priority,
         creator_id=current_user.id,
-        approval_status=approval_status
+        approval_status=approval_status,
+        assigned_to_id=ticket_in.assigned_to_id
     )
     db.add(ticket)
     db.flush() # flush to get ticket ID

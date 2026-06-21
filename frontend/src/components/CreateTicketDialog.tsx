@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,7 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
-import { createTicket } from "@/lib/api";
+import { createTicket, fetchAllRooms, fetchAllUsers } from "@/lib/api";
 
 export function CreateTicketDialog({ roomId }: { roomId?: string | null }) {
   const [open, setOpen] = useState(false);
@@ -17,7 +17,14 @@ export function CreateTicketDialog({ roomId }: { roomId?: string | null }) {
   const [description, setDescription] = useState("");
   const [priority, setPriority] = useState("low");
   const [dueDate, setDueDate] = useState("");
+  const [selectedRoomId, setSelectedRoomId] = useState<string>(roomId || "");
+  const [assignedToId, setAssignedToId] = useState<string>("");
   const queryClient = useQueryClient();
+
+  const { data: rooms } = useQuery({ queryKey: ["rooms"], queryFn: fetchAllRooms });
+  const { data: users } = useQuery({ queryKey: ["users"], queryFn: fetchAllUsers });
+
+  const filteredUsers = users?.filter((u: any) => selectedRoomId && u.room_ids?.includes(selectedRoomId)) || [];
 
   const createTicketMutation = useMutation({
     mutationFn: async (newTicket: any) => {
@@ -30,16 +37,20 @@ export function CreateTicketDialog({ roomId }: { roomId?: string | null }) {
       setDescription("");
       setPriority("low");
       setDueDate("");
+      setSelectedRoomId(roomId || "");
+      setAssignedToId("");
     },
   });
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!selectedRoomId) return;
     createTicketMutation.mutate({
       title,
       description,
       priority,
-      room_ids: roomId ? [roomId] : [],
+      room_ids: [selectedRoomId],
+      ...(assignedToId && { assigned_to_id: assignedToId }),
       ...(dueDate && { due_date: new Date(dueDate).toISOString() })
     });
   };
@@ -84,6 +95,33 @@ export function CreateTicketDialog({ roomId }: { roomId?: string | null }) {
                 <SelectItem value="low">Low</SelectItem>
                 <SelectItem value="medium">Medium</SelectItem>
                 <SelectItem value="high">High</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="room">Room</Label>
+            <Select value={selectedRoomId} onValueChange={(val) => { setSelectedRoomId(val); setAssignedToId(""); }} required>
+              <SelectTrigger>
+                <SelectValue placeholder="Select a room" />
+              </SelectTrigger>
+              <SelectContent>
+                {rooms?.map((r: any) => (
+                  <SelectItem key={r.id} value={r.id}>{r.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="assignee">Assign To</Label>
+            <Select value={assignedToId} onValueChange={setAssignedToId} disabled={!selectedRoomId}>
+              <SelectTrigger>
+                <SelectValue placeholder={selectedRoomId ? "Select an assignee (Optional)" : "Select a room first"} />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">Unassigned</SelectItem>
+                {filteredUsers.map((u: any) => (
+                  <SelectItem key={u.id} value={u.id}>{u.name}</SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>

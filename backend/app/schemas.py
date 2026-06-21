@@ -62,6 +62,7 @@ class TicketCreate(BaseModel):
     room_ids: List[UUID]
     priority: TicketPriority = TicketPriority.medium
     due_date: Optional[datetime] = None
+    assigned_to_id: Optional[UUID] = None
 
 class TicketUpdate(BaseModel):
     status: Optional[TicketStatus] = None

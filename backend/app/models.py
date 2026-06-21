@@ -11,6 +11,7 @@ class RoomType(enum.Enum):
     branch = "branch"
     department = "department"
     founder = "founder"
+    universal = "universal"
 
 class TicketStatus(enum.Enum):
     open = "open"
