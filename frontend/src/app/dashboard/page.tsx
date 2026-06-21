@@ -391,7 +391,7 @@ function DashboardContent() {
                       <SelectContent>
                         <SelectItem value="placeholder" disabled>Select department...</SelectItem>
                         {allRooms?.filter((r: any) => 
-                          r.type !== 'branch' && !selectedTicket.rooms?.some((tr: any) => tr.id === r.id)
+                          !selectedTicket.rooms?.some((tr: any) => tr.id === r.id)
                         ).map((r: any) => (
                           <SelectItem key={r.id} value={r.id} className="text-sm">
                             {r.name}
