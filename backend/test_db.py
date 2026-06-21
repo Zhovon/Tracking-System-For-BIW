@@ -1,5 +1,5 @@
 import os
-import sys
+
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -16,6 +16,7 @@ SessionLocal = sessionmaker(bind=engine)
 session = SessionLocal()
 try:
     from app.models import Employee
+
     users = session.query(Employee).all()
     print(f"Success! Found {len(users)} users.")
 except Exception as e:

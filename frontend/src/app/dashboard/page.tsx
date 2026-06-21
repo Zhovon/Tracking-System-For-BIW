@@ -72,7 +72,7 @@ function DashboardContent() {
       return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
     }) : [];
 
-  const { data: selectedTicket, isLoading: isTicketLoading } = useQuery({
+  const { data: selectedTicket, isLoading: isTicketLoading, error: ticketError } = useQuery({
     queryKey: ["ticket", ticketId],
     queryFn: () => fetchTicketDetails(ticketId as string),
     enabled: !!ticketId,
@@ -249,7 +249,20 @@ function DashboardContent() {
       {/* Right Panel (Detail View) */}
       {ticketId ? (
         <div className="flex-1 flex flex-col bg-slate-50 overflow-hidden animate-in slide-in-from-right-8 fade-in duration-300">
-          {selectedTicket ? (
+          {isTicketLoading ? (
+            <div className="flex-1 flex flex-col items-center justify-center text-slate-500">
+              <Loader2 className="w-8 h-8 animate-spin mb-4 text-indigo-500" />
+              <p>Loading ticket details...</p>
+            </div>
+          ) : ticketError ? (
+            <div className="flex-1 flex flex-col items-center justify-center text-red-500 p-8 text-center">
+              <AlertCircle className="w-12 h-12 mb-4 text-red-400" />
+              <p className="text-lg font-semibold text-slate-900">Failed to load ticket</p>
+              <p className="text-sm text-slate-500 mt-2 max-w-md">
+                {(ticketError as Error).message || "An unexpected error occurred. The ticket may have been deleted or you don't have permission to view it."}
+              </p>
+            </div>
+          ) : selectedTicket ? (
             <>
               <div className="p-6 bg-white border-b border-slate-200 flex-shrink-0">
                 {/* Mobile Back Button */}
@@ -496,11 +509,7 @@ function DashboardContent() {
                 </div>
               </div>
             </>
-          ) : (
-            <div className="flex-1 flex items-center justify-center text-slate-500">
-              Loading ticket details...
-            </div>
-          )}
+          ) : null}
         </div>
       ) : (
         <div className="hidden md:flex flex-1 flex-col items-center justify-center bg-slate-50/50 text-slate-400">

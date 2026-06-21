@@ -82,12 +82,15 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-from app.api.v1 import notifications, rooms, tickets, users
+from app.domains.notifications.router import router as notifications_router
+from app.domains.rooms.router import router as rooms_router
+from app.domains.tickets.router import router as tickets_router
+from app.domains.users.router import router as users_router
 
-app.include_router(tickets.router, prefix="/api/v1/tickets", tags=["tickets"])
-app.include_router(users.router, prefix="/api/v1/users", tags=["users"])
-app.include_router(rooms.router, prefix="/api/v1/rooms", tags=["rooms"])
-app.include_router(notifications.router, prefix="/api/v1/notifications", tags=["notifications"])
+app.include_router(tickets_router, prefix="/api/v1/tickets", tags=["tickets"])
+app.include_router(users_router, prefix="/api/v1/users", tags=["users"])
+app.include_router(rooms_router, prefix="/api/v1/rooms", tags=["rooms"])
+app.include_router(notifications_router, prefix="/api/v1/notifications", tags=["notifications"])
 
 
 @app.get("/")

@@ -1,7 +1,6 @@
 from logging.config import fileConfig
 
-from sqlalchemy import engine_from_config
-from sqlalchemy import pool
+from sqlalchemy import engine_from_config, pool
 
 from alembic import context
 
@@ -18,8 +17,10 @@ if config.config_file_name is not None:
 # for 'autogenerate' support
 import os
 import sys
+
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from app.models import Base
+
 target_metadata = Base.metadata
 
 # other values from the config, defined by the needs of env.py,
@@ -60,8 +61,9 @@ def run_migrations_online() -> None:
 
     """
     from dotenv import load_dotenv
+
     load_dotenv()
-    
+
     db_url = os.getenv("DATABASE_URL")
     if db_url:
         # Escape '%' for configparser interpolation
@@ -75,9 +77,7 @@ def run_migrations_online() -> None:
     )
 
     with connectable.connect() as connection:
-        context.configure(
-            connection=connection, target_metadata=target_metadata
-        )
+        context.configure(connection=connection, target_metadata=target_metadata)
 
         with context.begin_transaction():
             context.run_migrations()
