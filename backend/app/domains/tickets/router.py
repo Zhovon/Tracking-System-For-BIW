@@ -17,9 +17,12 @@ def get_my_rooms(
     """
     Retrieve all rooms the current user is a member of.
     """
-    rooms = [
-        membership.room for membership in current_user.room_memberships if membership.room.is_active
-    ]
+    if current_user.role == "owner":
+        rooms = db.query(models.Room).filter(models.Room.is_active == True).all()
+    else:
+        rooms = [
+            membership.room for membership in current_user.room_memberships if membership.room.is_active
+        ]
     return rooms
 
 
