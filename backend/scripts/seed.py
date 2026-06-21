@@ -36,9 +36,9 @@ def seed_database():
             db.add(r)
             rooms[d] = r
             
-        founder_room = Room(name="Founders", type=RoomType.founder)
+        founder_room = Room(name="Owners", type=RoomType.founder)
         db.add(founder_room)
-        rooms["Founders"] = founder_room
+        rooms["Owners"] = founder_room
         db.commit()
 
         # 2. Create Owner Account in Supabase
