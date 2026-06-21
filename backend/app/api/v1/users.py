@@ -3,6 +3,7 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 from app.api.deps import get_db, get_current_user
 from app import models, schemas
+from app.config import settings
 
 router = APIRouter()
 
@@ -40,8 +41,8 @@ def create_user(
     if current_user.role != "owner":
         raise HTTPException(status_code=403, detail="Only owners can create new staff accounts")
 
-    supabase_url = os.getenv("SUPABASE_URL")
-    supabase_key = os.getenv("SUPABASE_SERVICE_ROLE_KEY")
+    supabase_url = settings.SUPABASE_URL
+    supabase_key = settings.SUPABASE_SERVICE_ROLE_KEY
     
     if not supabase_url or not supabase_key:
         raise HTTPException(status_code=500, detail="Supabase admin keys not configured")

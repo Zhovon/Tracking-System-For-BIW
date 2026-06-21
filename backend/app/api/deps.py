@@ -4,6 +4,7 @@ from fastapi import Depends, HTTPException, status, Header
 from sqlalchemy.orm import Session
 from app.database import SessionLocal
 from app.models import Employee
+from app.config import settings
 
 def get_db() -> Generator:
     try:
@@ -23,7 +24,7 @@ def get_current_user(
     db: Session = Depends(get_db)
 ) -> Employee:
     token = credentials.credentials
-    jwt_secret = os.getenv("SUPABASE_JWT_SECRET")
+    jwt_secret = settings.SUPABASE_JWT_SECRET
     
     if not jwt_secret:
         raise HTTPException(
@@ -32,8 +33,8 @@ def get_current_user(
         )
 
     from supabase import create_client, Client
-    supabase_url = os.getenv("SUPABASE_URL")
-    supabase_key = os.getenv("SUPABASE_SERVICE_ROLE_KEY")
+    supabase_url = settings.SUPABASE_URL
+    supabase_key = settings.SUPABASE_SERVICE_ROLE_KEY
     supabase: Client = create_client(supabase_url, supabase_key)
 
     try:

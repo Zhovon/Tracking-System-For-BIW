@@ -9,6 +9,8 @@ from slowapi.middleware import SlowAPIMiddleware
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request as StarletteRequest
 
+from app.config import settings
+
 # Initialize rate limiter
 limiter = Limiter(key_func=get_remote_address, default_limits=["1000/minute"])
 
@@ -37,10 +39,10 @@ class PayloadSizeLimitMiddleware(BaseHTTPMiddleware):
 # Add Middlewares (executed bottom to top in Starlette)
 app.add_middleware(SlowAPIMiddleware)
 app.add_middleware(PayloadSizeLimitMiddleware, max_upload_size=50 * 1024 * 1024) # 50 MB limit
-app.add_middleware(TrustedHostMiddleware, allowed_hosts=["*"]) # In production, restrict this
+app.add_middleware(TrustedHostMiddleware, allowed_hosts=settings.trusted_hosts)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"], # Allowing all origins for easy production deployment
+    allow_origins=settings.cors_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
