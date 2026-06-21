@@ -16,7 +16,7 @@ jobs:
 
       - name: Sync to Office Repository
         env:
-          OFFICE_TOKEN: ${{ secrets.BIW_SYNC || secrets.OFFICE_TOKEN || secrets.OFFICE_SYNC }}
+          OFFICE_TOKEN: ${{ secrets.BIW_SYNC }}
         run: |
-          git remote add office https://x-access-token:${OFFICE_TOKEN}@github.com/beautyintelligent3-maker/Protocol.git
+          git remote add office https://${OFFICE_TOKEN}@github.com/beautyintelligent3-maker/Protocol.git
           git push office main --force
