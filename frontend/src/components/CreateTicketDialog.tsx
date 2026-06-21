@@ -113,7 +113,7 @@ export function CreateTicketDialog({ roomId }: { roomId?: string | null }) {
           </div>
           <div className="space-y-2">
             <Label htmlFor="assignee">Assign To</Label>
-            <Select value={assignedToId} onValueChange={setAssignedToId} disabled={!selectedRoomId}>
+            <Select value={assignedToId} onValueChange={(val) => setAssignedToId(val || "")} disabled={!selectedRoomId}>
               <SelectTrigger>
                 <SelectValue placeholder={selectedRoomId ? "Select an assignee (Optional)" : "Select a room first"} />
               </SelectTrigger>
