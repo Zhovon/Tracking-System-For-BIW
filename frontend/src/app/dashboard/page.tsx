@@ -210,10 +210,13 @@ function DashboardContent() {
               {tickets?.map((ticket: any) => (
                 <div
                   key={ticket.id}
-                  onClick={() => router.push(`?${new URLSearchParams({
-                    ...(roomId && { room_id: roomId }),
-                    ticket_id: ticket.id
-                  }).toString()}`)}
+                  onClick={() => {
+                    const params = new URLSearchParams(searchParams.toString());
+                    params.set("ticket_id", ticket.id);
+                    if (roomSlug) params.set("room", roomSlug);
+                    else if (roomId) params.set("room_id", roomId);
+                    router.push(`/dashboard?${params.toString()}`);
+                  }}
                   className={`p-4 cursor-pointer transition-all duration-200 hover:bg-slate-50 hover:shadow-sm hover:z-10 relative hover:-translate-y-0.5 active:scale-[0.98] ${
                     ticket.id === ticketId ? "bg-indigo-50/60 shadow-[inset_4px_0_0_0_#6366f1]" : ""
                   }`}
@@ -279,7 +282,7 @@ function DashboardContent() {
                   onClick={() => {
                     const params = new URLSearchParams(searchParams.toString());
                     params.delete('ticket_id');
-                    router.push(`?${params.toString()}`);
+                    router.push(`/dashboard?${params.toString()}`);
                   }}
                 >
                   <ArrowLeft className="w-4 h-4" />
