@@ -263,8 +263,8 @@ function DashboardContent() {
               </p>
             </div>
           ) : selectedTicket ? (
-            <div className="flex-1 overflow-y-auto flex flex-col bg-slate-50">
-              <div className="p-6 bg-white border-b border-slate-200 flex-shrink-0">
+            <div className="flex-1 overflow-y-auto bg-slate-50 relative">
+              <div className="p-4 md:p-6 bg-white border-b border-slate-200">
                 {/* Mobile Back Button */}
                 <Button 
                   variant="ghost" 
@@ -508,7 +508,7 @@ function DashboardContent() {
                   </div>
                 </div>
               </div>
-            </>
+            </div>
           ) : null}
         </div>
       ) : (
