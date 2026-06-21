@@ -20,9 +20,15 @@ def get_my_rooms(
     if current_user.role == "owner":
         rooms = db.query(models.Room).filter(models.Room.is_active == True).all()
     else:
-        rooms = [
+        user_rooms = [
             membership.room for membership in current_user.room_memberships if membership.room.is_active
         ]
+        universal_rooms = db.query(models.Room).filter(
+            models.Room.type == models.RoomType.universal, models.Room.is_active == True
+        ).all()
+        # Combine without duplicates
+        rooms_dict = {r.id: r for r in user_rooms + universal_rooms}
+        rooms = list(rooms_dict.values())
     return rooms
 
 
@@ -44,18 +50,29 @@ def get_tickets(
     """
     query = db.query(models.Ticket).filter(models.Ticket.is_active == True)
 
+    # Subquery to find tickets linked to universal rooms
+    universal_room_tickets = (
+        db.query(models.TicketRoom.ticket_id)
+        .join(models.Room)
+        .filter(models.Room.type == models.RoomType.universal)
+    )
+
     if current_user.role == "owner":
         # Owners see everything
         pass
     elif current_user.role in ["manager", "hr", "it_team"]:
-        # Creators/Managers see what they made or what is assigned to them
+        # Creators/Managers see what they made or what is assigned to them, plus Universal notices
         query = query.filter(
             (models.Ticket.creator_id == current_user.id)
             | (models.Ticket.assigned_to_id == current_user.id)
+            | models.Ticket.id.in_(universal_room_tickets)
         )
     else:
-        # Staff ONLY see what is assigned to them
-        query = query.filter(models.Ticket.assigned_to_id == current_user.id)
+        # Staff ONLY see what is assigned to them, plus Universal notices
+        query = query.filter(
+            (models.Ticket.assigned_to_id == current_user.id)
+            | models.Ticket.id.in_(universal_room_tickets)
+        )
 
     if room_id:
         query = query.join(models.TicketRoom).filter(models.TicketRoom.room_id == room_id)
@@ -145,12 +162,15 @@ def get_ticket(
 
     # Security Check
     if current_user.role != "owner":
-        if current_user.role in ["manager", "hr", "it_team"]:
-            if ticket.creator_id != current_user.id and ticket.assigned_to_id != current_user.id:
-                raise HTTPException(status_code=403, detail="Not authorized to view this ticket")
-        else:
-            if ticket.assigned_to_id != current_user.id:
-                raise HTTPException(status_code=403, detail="Not authorized to view this ticket")
+        is_universal = any(link.room.type == models.RoomType.universal for link in ticket.room_links)
+
+        if not is_universal:
+            if current_user.role in ["manager", "hr", "it_team"]:
+                if ticket.creator_id != current_user.id and ticket.assigned_to_id != current_user.id:
+                    raise HTTPException(status_code=403, detail="Not authorized to view this ticket")
+            else:
+                if ticket.assigned_to_id != current_user.id:
+                    raise HTTPException(status_code=403, detail="Not authorized to view this ticket")
 
     ticket.rooms = [link.room for link in ticket.room_links]
     return ticket
