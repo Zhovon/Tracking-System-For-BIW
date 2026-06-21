@@ -263,7 +263,7 @@ function DashboardContent() {
               </p>
             </div>
           ) : selectedTicket ? (
-            <>
+            <div className="flex-1 overflow-y-auto flex flex-col bg-slate-50">
               <div className="p-6 bg-white border-b border-slate-200 flex-shrink-0">
                 {/* Mobile Back Button */}
                 <Button 
@@ -410,7 +410,7 @@ function DashboardContent() {
                 </div>
               </div>
               
-              <div className="flex-1 overflow-y-auto p-6 bg-slate-50">
+              <div className="p-6 bg-slate-50">
                 <div className="max-w-4xl mx-auto">
                   {/* Original Description */}
                   <div className="mb-8 bg-white rounded-xl p-5 shadow-sm border border-slate-100">

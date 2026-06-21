@@ -232,10 +232,17 @@ export default function DashboardLayout({
 
       {/* Mobile Bottom Navigation Bar (Hidden on Desktop) */}
       <div className="md:hidden fixed bottom-0 left-0 right-0 h-[60px] bg-white/85 backdrop-blur-xl border-t border-slate-200/50 flex items-center justify-around z-50 px-2 pb-safe shadow-[0_-4px_25px_rgba(0,0,0,0.06)]">
-        <Link href="/dashboard" className="flex flex-col items-center justify-center w-16 h-full text-slate-500 hover:text-indigo-600 transition-colors active:scale-95">
+        <button 
+          onClick={() => {
+            const params = new URLSearchParams(window.location.search);
+            params.delete('ticket_id');
+            router.push(`/dashboard?${params.toString()}`);
+          }} 
+          className="flex flex-col items-center justify-center w-16 h-full text-slate-500 hover:text-indigo-600 transition-colors active:scale-95"
+        >
           <LayoutDashboard className="w-5 h-5 mb-1" />
           <span className="text-[10px] font-medium">Tickets</span>
-        </Link>
+        </button>
         
         <button onClick={() => { setMobileRoomsOpen(!mobileRoomsOpen); setMobileProfileOpen(false); setShowNotifications(false); }} className="flex flex-col items-center justify-center w-16 h-full text-slate-500 hover:text-indigo-600 transition-colors active:scale-95">
           <Users className="w-5 h-5 mb-1" />
