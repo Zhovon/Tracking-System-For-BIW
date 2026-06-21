@@ -77,6 +77,7 @@ app.add_middleware(TrustedHostMiddleware, allowed_hosts=settings.trusted_hosts)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origins,
+    allow_origin_regex=getattr(settings, "ALLOWED_ORIGIN_REGEX", None),
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

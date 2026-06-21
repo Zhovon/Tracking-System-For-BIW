@@ -9,8 +9,8 @@ class Settings(BaseSettings):
     SUPABASE_SERVICE_ROLE_KEY: str
     SUPABASE_JWT_SECRET: str
 
-    # Comma-separated strings or lists
     ALLOWED_ORIGINS: Union[str, List[str]] = ["https://tracking-system-for-biw-2vo8.vercel.app"]
+    ALLOWED_ORIGIN_REGEX: str = r"https://tracking-system-for-biw.*\.vercel\.app"
     ALLOWED_HOSTS: Union[str, List[str]] = ["*"]
 
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
