@@ -22,14 +22,14 @@ class UserCreate(BaseModel):
     email: str
     password: str
     role: str
-    room_id: UUID
+    room_ids: List[UUID]
 
 class UserUpdate(BaseModel):
     name: Optional[str] = None
     email: Optional[str] = None
     role: Optional[str] = None
     password: Optional[str] = None
-    room_id: Optional[UUID] = None
+    room_ids: Optional[List[UUID]] = None
 
 # --- Room Schemas ---
 class RoomOut(BaseModel):

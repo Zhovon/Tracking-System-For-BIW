@@ -20,7 +20,7 @@ export default function StaffManagementPage() {
     email: "",
     password: "",
     role: "therapist",
-    room_id: ""
+    room_ids: [] as string[]
   });
 
   // Check if current user is owner (in real app, we'd check their role token)
@@ -35,7 +35,7 @@ export default function StaffManagementPage() {
   });
 
   const [editingUser, setEditingUser] = useState<any>(null);
-  const [editFormData, setEditFormData] = useState({ name: "", email: "", password: "", role: "", room_id: "" });
+  const [editFormData, setEditFormData] = useState({ name: "", email: "", password: "", role: "", room_ids: [] as string[] });
   const currentUserRole = "owner"; // Assumed owner role for this restricted page
 
   const updateMutation = useMutation({
@@ -59,7 +59,7 @@ export default function StaffManagementPage() {
       email: user.email,
       password: "",
       role: user.role,
-      room_id: ""
+      room_ids: user.room_ids || []
     });
     setEditingUser(user);
   };
@@ -69,7 +69,7 @@ export default function StaffManagementPage() {
     onSuccess: () => {
       setSuccess(true);
       setError(null);
-      setFormData({ name: "", email: "", password: "", role: "therapist", room_id: "" });
+      setFormData({ name: "", email: "", password: "", role: "therapist", room_ids: [] });
       queryClient.invalidateQueries({ queryKey: ['admin-users'] });
       setTimeout(() => setSuccess(false), 5000);
     },
@@ -156,17 +156,26 @@ export default function StaffManagementPage() {
                 </div>
 
                 <div className="space-y-2">
-                  <label className="text-xs font-medium text-slate-700">Initial Branch / Department</label>
-                  <Select value={formData.room_id} onValueChange={(val) => setFormData({...formData, room_id: val || ""})}>
-                    <SelectTrigger className="bg-slate-50 border-slate-200 text-slate-900">
-                      <SelectValue placeholder="Select branch" />
-                    </SelectTrigger>
-                    <SelectContent className="bg-white border-slate-200 text-slate-900">
-                      {rooms?.map((r: any) => (
-                        <SelectItem key={r.id} value={r.id}>{r.name} ({r.type})</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <label className="text-xs font-medium text-slate-700">Initial Branch(es) / Department(s)</label>
+                  <div className="border border-slate-200 bg-slate-50 rounded-md p-3 max-h-48 overflow-y-auto space-y-2">
+                    {rooms?.map((r: any) => (
+                      <label key={r.id} className="flex items-center gap-2 cursor-pointer text-sm text-slate-700">
+                        <input
+                          type="checkbox"
+                          className="w-4 h-4 rounded border-slate-300 text-indigo-500 focus:ring-indigo-500"
+                          checked={formData.room_ids.includes(r.id)}
+                          onChange={(e) => {
+                            const newRoomIds = e.target.checked 
+                              ? [...formData.room_ids, r.id]
+                              : formData.room_ids.filter((id) => id !== r.id);
+                            setFormData({...formData, room_ids: newRoomIds});
+                          }}
+                        />
+                        {r.name} ({r.type})
+                      </label>
+                    ))}
+                    {(!rooms || rooms.length === 0) && <p className="text-xs text-slate-500">No rooms available.</p>}
+                  </div>
                 </div>
 
                 <Button type="submit" disabled={createMutation.isPending} className="w-full bg-indigo-500 hover:bg-indigo-600 text-white mt-4">
@@ -274,15 +283,26 @@ export default function StaffManagementPage() {
                   </Select>
                 </div>
                 <div className="space-y-2">
-                  <label className="text-xs font-medium text-slate-700">Assign to Branch</label>
-                  <Select value={editFormData.room_id} onValueChange={(val) => setEditFormData({...editFormData, room_id: val || ""})}>
-                    <SelectTrigger className="bg-slate-50"><SelectValue placeholder="Select branch" /></SelectTrigger>
-                    <SelectContent>
-                      {rooms?.map((r: any) => (
-                        <SelectItem key={r.id} value={r.id}>{r.name} ({r.type})</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <label className="text-xs font-medium text-slate-700">Assign to Branch(es)</label>
+                  <div className="border border-slate-200 bg-slate-50 rounded-md p-3 max-h-48 overflow-y-auto space-y-2">
+                    {rooms?.map((r: any) => (
+                      <label key={r.id} className="flex items-center gap-2 cursor-pointer text-sm text-slate-700">
+                        <input
+                          type="checkbox"
+                          className="w-4 h-4 rounded border-slate-300 text-indigo-500 focus:ring-indigo-500"
+                          checked={editFormData.room_ids.includes(r.id)}
+                          onChange={(e) => {
+                            const newRoomIds = e.target.checked 
+                              ? [...editFormData.room_ids, r.id]
+                              : editFormData.room_ids.filter((id) => id !== r.id);
+                            setEditFormData({...editFormData, room_ids: newRoomIds});
+                          }}
+                        />
+                        {r.name} ({r.type})
+                      </label>
+                    ))}
+                    {(!rooms || rooms.length === 0) && <p className="text-xs text-slate-500">No rooms available.</p>}
+                  </div>
                 </div>
                 
                 <Button 
@@ -294,7 +314,7 @@ export default function StaffManagementPage() {
                     if(editFormData.email) payload.email = editFormData.email;
                     if(editFormData.password) payload.password = editFormData.password;
                     if(editFormData.role) payload.role = editFormData.role;
-                    if(editFormData.room_id) payload.room_id = editFormData.room_id;
+                    if(editFormData.room_ids && editFormData.room_ids.length > 0) payload.room_ids = editFormData.room_ids;
                     updateMutation.mutate({ id: editingUser.id, payload });
                   }}
                 >

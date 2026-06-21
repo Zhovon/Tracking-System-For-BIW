@@ -75,9 +75,11 @@ def create_user(
         )
         db.add(employee)
         
-        # Link to the selected room
-        room_membership = models.RoomMember(employee_id=employee.id, room_id=user_in.room_id)
-        db.add(room_membership)
+        # Link to the selected rooms
+        if user_in.room_ids:
+            for r_id in user_in.room_ids:
+                room_membership = models.RoomMember(employee_id=employee.id, room_id=r_id)
+                db.add(room_membership)
         
         db.commit()
         db.refresh(employee)
@@ -135,10 +137,11 @@ def update_user(
         if user_in.email is not None:
             employee.email = user_in.email
 
-        if user_in.room_id is not None:
+        if user_in.room_ids is not None:
             db.query(models.RoomMember).filter(models.RoomMember.employee_id == employee.id).delete()
-            new_membership = models.RoomMember(employee_id=employee.id, room_id=user_in.room_id)
-            db.add(new_membership)
+            for r_id in user_in.room_ids:
+                new_membership = models.RoomMember(employee_id=employee.id, room_id=r_id)
+                db.add(new_membership)
 
         db.commit()
         db.refresh(employee)
