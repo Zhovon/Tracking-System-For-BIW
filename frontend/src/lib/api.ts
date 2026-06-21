@@ -102,8 +102,8 @@ export async function createUser(userData: any) {
   });
 }
 
-export async function fetchNotifications() {
-  return fetchApi(`/notifications`);
+export async function fetchNotifications(skip: number = 0, limit: number = 20) {
+  return fetchApi(`/notifications?skip=${skip}&limit=${limit}`);
 }
 
 export async function markNotificationRead(id: string) {

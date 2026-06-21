@@ -51,7 +51,7 @@ export default function DashboardLayout({
   const queryClient = useQueryClient();
   const { data: notifications } = useQuery({
     queryKey: ["notifications"],
-    queryFn: fetchNotifications,
+    queryFn: () => fetchNotifications(0, 20),
     refetchInterval: 10000,
     enabled: !!currentUser,
   });
@@ -66,6 +66,15 @@ export default function DashboardLayout({
   const [showNotifications, setShowNotifications] = useState(false);
   const [mobileRoomsOpen, setMobileRoomsOpen] = useState(false);
   const [mobileProfileOpen, setMobileProfileOpen] = useState(false);
+  
+  // Audio for notifications
+  const [audio] = useState(() => typeof Audio !== "undefined" ? new Audio("/ding.mp3") : null);
+
+  useEffect(() => {
+    if ("Notification" in window && Notification.permission === "default") {
+      Notification.requestPermission();
+    }
+  }, []);
 
   // Supabase Realtime for Notifications
   useEffect(() => {
@@ -74,7 +83,28 @@ export default function DashboardLayout({
     const channel = supabase.channel('notifications_changes')
       .on(
         'postgres_changes',
-        { event: '*', schema: 'public', table: 'notifications', filter: `user_id=eq.${currentUser.id}` },
+        { event: 'INSERT', schema: 'public', table: 'notifications', filter: `user_id=eq.${currentUser.id}` },
+        (payload: any) => {
+          queryClient.invalidateQueries({ queryKey: ["notifications"] });
+          
+          // Play sound
+          if (audio) {
+            audio.currentTime = 0;
+            audio.play().catch(e => console.log("Audio play blocked", e));
+          }
+
+          // Show native notification
+          if ("Notification" in window && Notification.permission === "granted") {
+            new Notification("New Notification", {
+              body: payload.new.message,
+              icon: "/logo.jpeg"
+            });
+          }
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'notifications', filter: `user_id=eq.${currentUser.id}` },
         () => {
           queryClient.invalidateQueries({ queryKey: ["notifications"] });
         }
@@ -138,6 +168,13 @@ export default function DashboardLayout({
               </div>
             )}
           </div>
+          <Link
+            href="/dashboard/notifications"
+            onClick={() => setShowNotifications(false)}
+            className="block p-3 border-t border-slate-200 bg-slate-50 text-center text-sm font-semibold text-indigo-600 hover:bg-slate-100 transition-colors"
+          >
+            See all in Notifications
+          </Link>
         </div>
       )}
     </div>
@@ -252,9 +289,17 @@ export default function DashboardLayout({
           <span className="text-[10px] font-medium">Rooms</span>
         </button>
 
-        <div className="flex flex-col items-center justify-center w-16 h-full text-slate-500 transition-colors active:scale-95">
-          <NotificationBell />
-        </div>
+        <Link 
+          href="/dashboard/notifications" 
+          onClick={() => { setMobileProfileOpen(false); setMobileRoomsOpen(false); setShowNotifications(false); }}
+          className="flex flex-col items-center justify-center w-16 h-full text-slate-500 hover:text-indigo-600 transition-colors active:scale-95 relative"
+        >
+          <Bell className="w-5 h-5 mb-1" />
+          <span className="text-[10px] font-medium">Alerts</span>
+          {unreadCount > 0 && (
+            <span className="absolute top-2 right-4 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white" />
+          )}
+        </Link>
 
         <button onClick={() => { setMobileProfileOpen(!mobileProfileOpen); setMobileRoomsOpen(false); setShowNotifications(false); }} className="flex flex-col items-center justify-center w-16 h-full text-slate-500 hover:text-indigo-600 transition-colors active:scale-95">
           <User className="w-5 h-5 mb-1" />
