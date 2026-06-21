@@ -323,7 +323,7 @@ function DashboardContent() {
                         Approve
                       </Button>
                     )}
-                    {selectedTicket.status !== "resolved" && (
+                    {selectedTicket.status !== "resolved" ? (
                       <Button 
                         variant="outline" 
                         size="sm" 
@@ -333,6 +333,17 @@ function DashboardContent() {
                       >
                         <CheckCircle2 className="w-4 h-4 mr-2" />
                         Mark Resolved
+                      </Button>
+                    ) : (
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        className="text-amber-600 border-amber-200 hover:bg-amber-50 dark:hover:bg-amber-900/20"
+                        onClick={() => updateTicketMutation.mutate({ status: "open" })}
+                        disabled={updateTicketMutation.isPending}
+                      >
+                        <CheckCircle2 className="w-4 h-4 mr-2" />
+                        Re-open Ticket
                       </Button>
                     )}
                   </div>
