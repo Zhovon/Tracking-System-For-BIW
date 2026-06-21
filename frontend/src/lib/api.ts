@@ -18,7 +18,11 @@ export async function fetchApi(endpoint: string, options: RequestInit = {}) {
 
   const res = await fetch(`${API_BASE_URL}${endpoint}`, {
     ...options,
-    headers,
+    headers: {
+      ...headers,
+      "Cache-Control": "no-cache, no-store, must-revalidate",
+      "Pragma": "no-cache",
+    },
   });
 
   if (!res.ok) {
