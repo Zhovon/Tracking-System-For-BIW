@@ -154,9 +154,11 @@ function DashboardContent() {
                 Filtered
               </Badge>
             )}
+          </div>
           {["owner", "manager", "hr", "it_team"].includes(currentUserRole) && (
             <CreateTicketDialog roomId={roomId} />
           )}
+        </div>
 
         <div className="p-4 border-b border-slate-200 space-y-3 bg-slate-50">
           <div className="relative">
