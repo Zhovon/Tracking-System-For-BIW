@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 import { supabase } from "@/lib/supabase";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -63,7 +64,7 @@ export default function LoginPage() {
     <div className="min-h-screen flex items-center justify-center bg-indigo-50 p-4">
       <div className="w-full max-w-md">
         <div className="text-center mb-8 flex flex-col items-center">
-          <img src="/logo.jpeg" alt="BIW OS Logo" className="w-16 h-16 rounded-xl mb-4 shadow-sm object-cover" />
+          <Image src="/logo.jpeg" alt="BIW OS Logo" width={64} height={64} className="rounded-xl mb-4 shadow-sm object-cover" />
           <h1 className="text-3xl font-bold tracking-tight text-indigo-900 mb-2">BIW OS</h1>
           <p className="text-slate-600">
             {view === "login" ? "Sign in to manage your system" : "Reset your password"}
@@ -152,7 +153,7 @@ export default function LoginPage() {
                 </Button>
                 <CardTitle className="text-xl text-slate-900">Forgot Password</CardTitle>
                 <CardDescription className="text-slate-500">
-                  Enter your email address and we'll send you a link to reset your password.
+                  Enter your email address and we&apos;ll send you a link to reset your password.
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -205,7 +206,7 @@ export default function LoginPage() {
           )}
         </Card>
         <p className="text-center text-sm text-slate-500 mt-8">
-          Don't have an account? Contact your BIW owner to request access.
+          Don&apos;t have an account? Contact your BIW owner to request access.
         </p>
       </div>
     </div>

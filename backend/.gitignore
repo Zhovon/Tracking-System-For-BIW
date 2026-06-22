@@ -5,3 +5,4 @@ __pycache__/
 .pytest_cache/
 alembic/versions/__pycache__/
 *.sqlite3
+scripts/

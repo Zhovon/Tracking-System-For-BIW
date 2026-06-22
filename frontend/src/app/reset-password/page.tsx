@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 import { supabase } from "@/lib/supabase";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -80,7 +81,7 @@ export default function ResetPasswordPage() {
     <div className="min-h-screen flex items-center justify-center bg-indigo-50 p-4">
       <div className="w-full max-w-md">
         <div className="text-center mb-8 flex flex-col items-center">
-          <img src="/logo.jpeg" alt="BIW OS Logo" className="w-16 h-16 rounded-xl mb-4 shadow-sm object-cover" />
+          <Image src="/logo.jpeg" alt="BIW OS Logo" width={64} height={64} className="rounded-xl mb-4 shadow-sm object-cover" />
           <h1 className="text-3xl font-bold tracking-tight text-indigo-900 mb-2">BIW OS</h1>
           <p className="text-slate-600">Secure your account</p>
         </div>
