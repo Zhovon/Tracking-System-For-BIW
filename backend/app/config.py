@@ -9,7 +9,11 @@ class Settings(BaseSettings):
     SUPABASE_SERVICE_ROLE_KEY: str
     SUPABASE_JWT_SECRET: str
 
-    ALLOWED_ORIGINS: Union[str, List[str]] = ["https://tracking-system-for-biw-2vo8.vercel.app"]
+    ALLOWED_ORIGINS: Union[str, List[str]] = [
+        "https://tracking-system-for-biw-2vo8.vercel.app",
+        "https://protocal.biw.salon",
+        "http://localhost:3000"
+    ]
     ALLOWED_ORIGIN_REGEX: str = r"https://tracking-system-for-biw.*\.vercel\.app"
     ALLOWED_HOSTS: Union[str, List[str]] = ["*"]
 
