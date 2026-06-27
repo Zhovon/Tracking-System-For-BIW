@@ -19,7 +19,4 @@ jobs:
         env:
           OFFICE_TOKEN: ${{ secrets.BIW_SYNC }}
         run: |
-          git config --global credential.helper store
-          echo "https://x-access-token:${OFFICE_TOKEN}@github.com" > ~/.git-credentials
-          git remote add office https://github.com/beautyintelligent3-maker/Protocol.git
-          git push office main --force
+          git push https://${OFFICE_TOKEN}@github.com/beautyintelligent3-maker/Protocol.git main --force
