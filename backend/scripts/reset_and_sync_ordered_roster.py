@@ -241,7 +241,7 @@ def reset_and_sync():
     core_users = [
         {"email": "razib@biw.salon", "uid": "0001", "name": "Razib Ahamed", "role": "owner", "password": "Existing Account", "phone": "-", "joining": "-"},
         {"email": "usman@biw.salon", "uid": "0002", "name": "Usman Hossain", "role": "owner", "password": "BiwOwner2026!", "phone": "-", "joining": "-"},
-        {"email": "laboni@biw.salon", "uid": "0003", "name": "Laboni Akter", "role": "owner", "password": "BiwOwner2026!", "phone": "-", "joining": "-"},
+        {"email": "laboni@biw.salon", "uid": "0003", "name": "Laboni Akter", "role": "owner", "password": "laboni123", "phone": "-", "joining": "-"},
         {"email": "khalid@biw.salon", "uid": "0004", "name": "Khalid Brand Consultant", "role": "brand_consultant", "password": "BiwBrand2026!", "phone": "-", "joining": "-"}
     ]
     for core in core_users:
