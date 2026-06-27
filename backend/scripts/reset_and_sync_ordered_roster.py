@@ -119,6 +119,12 @@ def reset_and_sync():
                 except Exception:
                     pass
 
+                # Delete notifications
+                try:
+                    supabase.table("notifications").delete().eq("user_id", user_id).execute()
+                except Exception as ne:
+                    print(f"    Warning: failed to delete notifications: {ne}")
+
                 # Delete room memberships
                 supabase.table("room_members").delete().eq("employee_id", user_id).execute()
                 # Delete employee
