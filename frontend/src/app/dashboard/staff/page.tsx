@@ -9,6 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AlertCircle, CheckCircle2, Loader2, UserPlus, ShieldAlert, Edit2, Trash2, X } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export default function StaffManagementPage() {
   const queryClient = useQueryClient();
@@ -281,7 +282,20 @@ export default function StaffManagementPage() {
             </CardHeader>
             <CardContent>
               {loadingUsers ? (
-                <div className="flex justify-center p-8"><Loader2 className="h-8 w-8 animate-spin text-slate-400" /></div>
+                <div className="flex flex-col gap-3 animate-pulse">
+                  {[...Array(4)].map((_, i) => (
+                    <div key={i} className="p-4 rounded-xl border border-slate-200 bg-slate-50/50 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                      <div className="flex flex-col gap-2 flex-1">
+                        <div className="flex items-center gap-2">
+                          <Skeleton className="h-4 w-32 bg-slate-200" />
+                          <Skeleton className="h-3.5 w-16 bg-slate-200" />
+                        </div>
+                        <Skeleton className="h-3.5 w-48 bg-slate-200" />
+                      </div>
+                      <Skeleton className="h-7 w-20 bg-slate-200 rounded-md" />
+                    </div>
+                  ))}
+                </div>
               ) : (
                 <div className="flex flex-col gap-3">
                   {users?.map((user: any) => (

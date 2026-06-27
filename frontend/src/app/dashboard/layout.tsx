@@ -9,6 +9,7 @@ import { LayoutDashboard, Users, User, Loader2, Bell, CheckCircle2, UserPlus, Lo
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { ChangePasswordDialog } from "@/components/ChangePasswordDialog";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export const getSlug = (name: string) => name.toLowerCase().replace(/[^a-z0-9]+/g, '-');
 
@@ -200,8 +201,13 @@ export default function DashboardLayout({
             </h2>
             
             {isLoading && (
-              <div className="flex justify-center p-4">
-                <Loader2 className="w-5 h-5 animate-spin text-zinc-400" />
+              <div className="space-y-2 px-3 py-1">
+                {[...Array(5)].map((_, i) => (
+                  <div key={i} className="flex items-center gap-3 py-1.5 animate-pulse">
+                    <Skeleton className="w-4 h-4 rounded-full bg-slate-200" />
+                    <Skeleton className="h-4 flex-1 bg-slate-200" />
+                  </div>
+                ))}
               </div>
             )}
             

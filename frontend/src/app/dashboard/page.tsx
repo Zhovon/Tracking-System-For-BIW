@@ -20,25 +20,33 @@ import { Input } from "@/components/ui/input";
 import { CreateTicketDialog } from "@/components/CreateTicketDialog";
 import { supabase } from "@/lib/supabase";
 import { getSlug } from "./layout";
+import { Skeleton } from "@/components/ui/skeleton";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1";
 
 function toLocalDatetimeValue(utcDate: string): string {
   const d = new Date(utcDate);
-  return [
-    d.getFullYear(),
-    String(d.getMonth() + 1).padStart(2, "0"),
-    String(d.getDate()).padStart(2, "0"),
-  ].join("-") + "T" + [
-    String(d.getHours()).padStart(2, "0"),
-    String(d.getMinutes()).padStart(2, "0"),
-  ].join(":");
+  return (
+    [
+      d.getFullYear(),
+      String(d.getMonth() + 1).padStart(2, "0"),
+      String(d.getDate()).padStart(2, "0"),
+    ].join("-") +
+    "T" +
+    [
+      String(d.getHours()).padStart(2, "0"),
+      String(d.getMinutes()).padStart(2, "0"),
+    ].join(":")
+  );
 }
 
 function formatDateTime(dateStr: string): string {
   return new Date(dateStr).toLocaleString("en-GB", {
-    day: "2-digit", month: "short", year: "numeric",
-    hour: "2-digit", minute: "2-digit",
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
   });
 }
 
@@ -63,6 +71,7 @@ function DashboardContent() {
   const [comment, setComment] = useState("");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [dueDate, setDueDate] = useState("");
+  const [mobileTab, setMobileTab] = useState<"activity" | "details">("activity");
 
   const queryClient = useQueryClient();
 
@@ -105,7 +114,9 @@ function DashboardContent() {
     enabled: !!ticketId,
   });
 
+  // Reset mobile tab + due date when ticket changes
   useEffect(() => {
+    setMobileTab("activity");
     setDueDate(selectedTicket?.due_date ? toLocalDatetimeValue(selectedTicket.due_date) : "");
   }, [selectedTicket?.id]);
 
@@ -138,6 +149,40 @@ function DashboardContent() {
       queryClient.invalidateQueries({ queryKey: ["tickets"] });
     },
   });
+
+  const downloadAttachment = async (messageId: string, filename: string) => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const headers: Record<string, string> = {};
+      if (session?.access_token) {
+        headers['Authorization'] = `Bearer ${session.access_token}`;
+      }
+      const res = await fetch(`${API_BASE}/tickets/messages/${messageId}/attachment`, {
+        headers,
+      });
+      if (!res.ok) {
+        let errMessage = "Failed to download attachment";
+        try {
+          const errData = await res.json();
+          errMessage = errData.detail || errMessage;
+        } catch (_) {}
+        alert(errMessage);
+        return;
+      }
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error(err);
+      alert("An error occurred during file download");
+    }
+  };
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -209,6 +254,190 @@ function DashboardContent() {
     ? allRooms?.find((r: any) => r.id === roomId)?.name
     : "All Tickets";
 
+  // ── SHARED PROPERTIES PANEL CONTENT ─────────────────────────────────────
+  const PropertiesContent = () => (
+    <div className="p-4 space-y-4">
+
+      {/* Status + Priority — side by side on mobile */}
+      <div className="grid grid-cols-2 md:grid-cols-1 gap-4">
+        <div>
+          <PropLabel>Status</PropLabel>
+          <Badge
+            className={`text-[10px] uppercase tracking-widest font-bold border px-2 py-0.5 ${getStatusColor(selectedTicket!.status)}`}
+          >
+            {selectedTicket!.status.replace("_", " ")}
+          </Badge>
+          {selectedTicket!.approval_status === "pending" && (
+            <Badge className="mt-1 block w-fit text-[10px] uppercase tracking-widest font-bold bg-amber-50 text-amber-700 border border-amber-200 px-2 py-0.5">
+              Pending
+            </Badge>
+          )}
+        </div>
+
+        <div>
+          <PropLabel>Priority</PropLabel>
+          <Select
+            value={selectedTicket!.priority}
+            onValueChange={(val) => updateTicketMutation.mutate({ priority: val })}
+            disabled={updateTicketMutation.isPending || selectedTicket!.status === "resolved"}
+          >
+            <SelectTrigger className="h-8 w-full border-slate-200 text-xs bg-slate-50 hover:bg-slate-100">
+              <div className="flex items-center gap-1.5">
+                <div className={`w-2 h-2 rounded-full ${getPriorityDot(selectedTicket!.priority)}`} />
+                <span className="capitalize">{selectedTicket!.priority}</span>
+              </div>
+            </SelectTrigger>
+            <SelectContent>
+              {["low", "medium", "high"].map((p) => (
+                <SelectItem key={p} value={p} className="text-xs capitalize">
+                  {p.charAt(0).toUpperCase() + p.slice(1)}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
+      {/* Assignee */}
+      <div>
+        <PropLabel>Assignee</PropLabel>
+        <Select
+          value={assigneeId || "unassigned"}
+          onValueChange={(val) =>
+            updateTicketMutation.mutate({
+              assigned_to_id: val === "unassigned" ? null : val,
+            })
+          }
+          disabled={updateTicketMutation.isPending || selectedTicket!.status === "resolved"}
+        >
+          <SelectTrigger className="h-8 w-full border-slate-200 text-xs bg-slate-50 hover:bg-slate-100">
+            <div className="flex items-center gap-1.5 truncate">
+              <div className="w-5 h-5 rounded-full bg-indigo-100 text-indigo-700 text-[10px] font-bold flex items-center justify-center shrink-0">
+                {resolvedAssigneeName
+                  ? resolvedAssigneeName.replace(/\[.*?\]\s*/, "").charAt(0)
+                  : "?"}
+              </div>
+              <span className="truncate text-xs">
+                {resolvedAssigneeName || "Unassigned"}
+              </span>
+            </div>
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="unassigned" className="text-xs">Unassigned</SelectItem>
+            {allUsers
+              ?.filter(
+                (u: any) =>
+                  selectedTicket!.rooms?.some((r: any) => u.room_ids?.includes(r.id)) ||
+                  u.id === assigneeId
+              )
+              .map((u: any) => (
+                <SelectItem key={u.id} value={u.id} className="text-xs">
+                  {u.staff_id ? `[${u.staff_id}] ` : ""}
+                  {u.name}
+                </SelectItem>
+              ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      {/* Due Date */}
+      <div>
+        <PropLabel>Due Date</PropLabel>
+        <Input
+          type="datetime-local"
+          className="h-8 border-slate-200 text-xs bg-slate-50 hover:bg-slate-100"
+          value={dueDate}
+          onChange={(e) => setDueDate(e.target.value)}
+          onBlur={handleDueDateBlur}
+        />
+        {isOverdue && (
+          <p className="text-[10px] text-red-500 mt-1 font-bold uppercase tracking-wider">
+            Overdue
+          </p>
+        )}
+      </div>
+
+      <Separator className="bg-slate-100" />
+
+      {/* Rooms */}
+      <div>
+        <PropLabel>Rooms</PropLabel>
+        <div className="flex flex-wrap gap-1">
+          {selectedTicket!.rooms?.length > 0 ? (
+            selectedTicket!.rooms.map((room: any) => (
+              <Badge
+                key={room.id}
+                variant="secondary"
+                className="bg-slate-100 text-slate-600 border border-slate-200 text-[10px] px-1.5 py-0.5 font-medium"
+              >
+                {room.name}
+              </Badge>
+            ))
+          ) : (
+            <span className="text-xs text-slate-400">None</span>
+          )}
+        </div>
+      </div>
+
+      {/* Escalate */}
+      <div>
+        <PropLabel>Escalate To</PropLabel>
+        <Select
+          value="placeholder"
+          onValueChange={(val) => updateTicketMutation.mutate({ add_room_id: val })}
+          disabled={updateTicketMutation.isPending || selectedTicket!.status === "resolved"}
+        >
+          <SelectTrigger className="h-8 w-full border-slate-200 text-xs bg-slate-50 hover:bg-slate-100">
+            <SelectValue placeholder="Add department…" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="placeholder" disabled className="text-xs">
+              Select department…
+            </SelectItem>
+            {allRooms
+              ?.filter((r: any) => !selectedTicket!.rooms?.some((tr: any) => tr.id === r.id))
+              .map((r: any) => (
+                <SelectItem key={r.id} value={r.id} className="text-xs">
+                  {r.name}
+                </SelectItem>
+              ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      <Separator className="bg-slate-100" />
+
+      {/* Created By + Opened — side by side on mobile */}
+      <div className="grid grid-cols-2 md:grid-cols-1 gap-4">
+        <div>
+          <PropLabel>Created By</PropLabel>
+          <div className="flex items-center gap-2 mt-0.5">
+            <div className="w-7 h-7 rounded-full bg-slate-200 text-slate-700 text-xs font-bold flex items-center justify-center shrink-0">
+              {selectedTicket!.creator?.name?.charAt(0)}
+            </div>
+            <div className="min-w-0">
+              <p className="text-sm font-semibold text-slate-800 truncate">
+                {selectedTicket!.creator?.name}
+              </p>
+              {selectedTicket!.creator?.staff_id && (
+                <p className="text-[10px] text-slate-400 font-mono">
+                  [{selectedTicket!.creator.staff_id}]
+                </p>
+              )}
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <PropLabel>Opened</PropLabel>
+          <p className="text-xs text-slate-600 leading-relaxed">
+            {formatDateTime(selectedTicket!.created_at)}
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+
   return (
     <div className="flex flex-1 h-full overflow-hidden bg-white">
 
@@ -220,8 +449,8 @@ function DashboardContent() {
       >
         {/* List header */}
         <div className="px-4 py-3 border-b border-slate-200 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Ticket className="w-4 h-4 text-slate-400" />
+          <div className="flex items-center gap-2 min-w-0">
+            <Ticket className="w-4 h-4 text-slate-400 shrink-0" />
             <h2 className="text-sm font-semibold text-slate-800 truncate">{roomName}</h2>
           </div>
           {["owner", "manager", "hr", "it_team"].includes(currentUserRole) && (
@@ -257,11 +486,23 @@ function DashboardContent() {
           </div>
         </div>
 
-        {/* Ticket list */}
+        {/* Ticket items */}
         <div className="flex-1 overflow-y-auto">
           {isLoading ? (
-            <div className="p-8 flex justify-center">
-              <Loader2 className="w-5 h-5 animate-spin text-slate-400" />
+            <div className="divide-y divide-slate-100">
+              {[...Array(5)].map((_, i) => (
+                <div key={i} className="p-3.5 space-y-2.5 animate-pulse">
+                  <div className="flex justify-between items-center">
+                    <Skeleton className="h-3 w-12 bg-slate-200" />
+                    <Skeleton className="h-4 w-16 bg-slate-200" />
+                  </div>
+                  <Skeleton className="h-5 w-4/5 bg-slate-200" />
+                  <div className="flex justify-between items-center pt-1">
+                    <Skeleton className="h-3.5 w-20 bg-slate-200" />
+                    <Skeleton className="h-3.5 w-10 bg-slate-200" />
+                  </div>
+                </div>
+              ))}
             </div>
           ) : error ? (
             <p className="p-4 text-center text-red-500 text-xs">Failed to load tickets.</p>
@@ -306,7 +547,8 @@ function DashboardContent() {
                     <span className="text-xs text-slate-400 truncate">{ticket.creator.name}</span>
                     <span className="text-xs text-slate-400 shrink-0 ml-2">
                       {new Date(ticket.created_at).toLocaleDateString("en-GB", {
-                        day: "2-digit", month: "short",
+                        day: "2-digit",
+                        month: "short",
                       })}
                     </span>
                   </div>
@@ -321,444 +563,343 @@ function DashboardContent() {
       {ticketId ? (
         <div className="flex-1 flex flex-col overflow-hidden">
           {isTicketLoading ? (
-            <div className="flex-1 flex items-center justify-center">
-              <Loader2 className="w-7 h-7 animate-spin text-indigo-500" />
+            <div className="flex-1 flex flex-col overflow-hidden animate-pulse">
+              {/* Header skeleton */}
+              <div className="bg-white border-b border-slate-200 px-4 py-3 md:px-5 md:py-4 flex-shrink-0 space-y-3">
+                <div className="flex gap-2">
+                  <Skeleton className="h-4 w-16 bg-slate-200" />
+                  <Skeleton className="h-4 w-12 bg-slate-200" />
+                </div>
+                <Skeleton className="h-6 w-3/4 bg-slate-200" />
+              </div>
+              <div className="flex-1 flex overflow-hidden min-h-0">
+                {/* Main panel skeleton */}
+                <div className="flex-1 flex flex-col overflow-y-auto min-w-0">
+                  {/* Description skeleton */}
+                  <div className="bg-[#f7f6f3] border-b border-slate-200 px-4 md:px-5 py-4 space-y-2">
+                    <Skeleton className="h-3 w-20 bg-slate-200" />
+                    <Skeleton className="h-4 w-full bg-slate-200" />
+                    <Skeleton className="h-4 w-5/6 bg-slate-200" />
+                  </div>
+                  {/* Timeline skeleton */}
+                  <div className="bg-[#f7f6f3] flex-1 px-4 md:px-5 py-4 space-y-4">
+                    <Skeleton className="h-3 w-16 bg-slate-200" />
+                    <div className="relative pl-5 border-l-2 border-slate-200 ml-1.5 space-y-6 pt-2">
+                      {[...Array(3)].map((_, i) => (
+                        <div key={i} className="flex gap-3">
+                          <Skeleton className="w-7 h-7 rounded-full bg-slate-200 -ml-[23px] border border-white" />
+                          <div className="flex-1 space-y-2">
+                            <div className="flex gap-2">
+                              <Skeleton className="h-3.5 w-24 bg-slate-200" />
+                              <Skeleton className="h-3 w-16 bg-slate-200 ml-auto" />
+                            </div>
+                            <Skeleton className="h-10 w-full bg-slate-200 rounded-md" />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+                {/* Properties panel skeleton */}
+                <div className="hidden md:block w-64 bg-white border-l border-slate-200 p-4 space-y-4 flex-shrink-0">
+                  {[...Array(5)].map((_, i) => (
+                    <div key={i} className="space-y-1.5">
+                      <Skeleton className="h-3 w-16 bg-slate-200" />
+                      <Skeleton className="h-8 w-full bg-slate-200" />
+                    </div>
+                  ))}
+                </div>
+              </div>
             </div>
           ) : ticketError ? (
             <div className="flex-1 flex flex-col items-center justify-center text-center p-8">
               <AlertCircle className="w-10 h-10 text-red-400 mb-3" />
               <p className="font-semibold text-slate-800">Failed to load ticket</p>
-              <p className="text-sm text-slate-500 mt-1">
-                {(ticketError as Error).message}
-              </p>
+              <p className="text-sm text-slate-500 mt-1">{(ticketError as Error).message}</p>
             </div>
           ) : selectedTicket ? (
-            <div className="flex-1 flex overflow-hidden">
+            <div className="flex-1 flex flex-col overflow-hidden">
 
-              {/* ── MAIN COLUMN ── */}
-              <div className="flex-1 overflow-y-auto flex flex-col min-w-0">
+              {/* ── HEADER (always visible — shared above both tabs) ── */}
+              <div className="bg-white border-b border-slate-200 px-4 py-3 md:px-5 md:py-4 flex-shrink-0">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="md:hidden mb-2 -ml-1 text-slate-500 h-8 text-xs"
+                  onClick={goBack}
+                >
+                  <ArrowLeft className="w-3.5 h-3.5 mr-1" />
+                  Back
+                </Button>
 
-                {/* Header */}
-                <div className="bg-white border-b border-slate-200 px-5 py-4 flex-shrink-0">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="md:hidden mb-3 -ml-1 text-slate-500 h-8 text-xs"
-                    onClick={goBack}
-                  >
-                    <ArrowLeft className="w-3.5 h-3.5 mr-1" />
-                    Back
-                  </Button>
-
-                  <div className="flex items-start gap-3 justify-between flex-wrap">
-                    <div className="flex-1 min-w-0">
-                      {/* Status row */}
-                      <div className="flex items-center flex-wrap gap-1.5 mb-2.5">
-                        <Badge
-                          className={`text-[10px] uppercase tracking-widest font-bold border px-2 py-0.5 ${getStatusColor(selectedTicket.status)}`}
-                        >
-                          {selectedTicket.status.replace("_", " ")}
+                <div className="flex items-start gap-2 justify-between">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center flex-wrap gap-1.5 mb-2">
+                      <Badge
+                        className={`text-[10px] uppercase tracking-widest font-bold border px-2 py-0.5 ${getStatusColor(selectedTicket.status)}`}
+                      >
+                        {selectedTicket.status.replace("_", " ")}
+                      </Badge>
+                      {selectedTicket.approval_status === "pending" && (
+                        <Badge className="text-[10px] uppercase tracking-widest font-bold bg-amber-50 text-amber-700 border border-amber-200 px-2 py-0.5">
+                          Pending
                         </Badge>
-                        {selectedTicket.approval_status === "pending" && (
-                          <Badge className="text-[10px] uppercase tracking-widest font-bold bg-amber-50 text-amber-700 border border-amber-200 px-2 py-0.5">
-                            Pending Approval
-                          </Badge>
-                        )}
-                        {isOverdue && (
-                          <Badge className="text-[10px] uppercase tracking-widest font-bold bg-red-50 text-red-600 border border-red-200 px-2 py-0.5 animate-pulse">
-                            Overdue
-                          </Badge>
-                        )}
-                      </div>
-                      <h1 className="text-lg font-bold text-slate-900 leading-snug">
-                        {selectedTicket.title}
-                      </h1>
-                    </div>
-
-                    {/* Action buttons */}
-                    <div className="flex gap-2 shrink-0">
-                      {selectedTicket.approval_status === "pending" &&
-                        currentUserRole === "owner" && (
-                          <Button
-                            size="sm"
-                            className="bg-amber-500 hover:bg-amber-600 text-white h-8 text-xs"
-                            onClick={() => approveTicketMutation.mutate()}
-                            disabled={approveTicketMutation.isPending}
-                          >
-                            <CheckCircle2 className="w-3.5 h-3.5 mr-1.5" />
-                            Approve
-                          </Button>
-                        )}
-                      {selectedTicket.status !== "resolved" ? (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="text-emerald-600 border-emerald-200 hover:bg-emerald-50 h-8 text-xs"
-                          onClick={() => updateTicketMutation.mutate({ status: "resolved" })}
-                          disabled={updateTicketMutation.isPending}
-                        >
-                          <CheckCircle2 className="w-3.5 h-3.5 mr-1.5" />
-                          Mark Resolved
-                        </Button>
-                      ) : (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="text-amber-600 border-amber-200 hover:bg-amber-50 h-8 text-xs"
-                          onClick={() => updateTicketMutation.mutate({ status: "open" })}
-                          disabled={updateTicketMutation.isPending}
-                        >
-                          <RotateCcw className="w-3.5 h-3.5 mr-1.5" />
-                          Re-open
-                        </Button>
+                      )}
+                      {isOverdue && (
+                        <Badge className="text-[10px] uppercase tracking-widest font-bold bg-red-50 text-red-600 border border-red-200 px-2 py-0.5 animate-pulse">
+                          Overdue
+                        </Badge>
                       )}
                     </div>
-                  </div>
-                </div>
-
-                {/* Description */}
-                <div className="bg-[#f7f6f3] border-b border-slate-200 px-5 py-4 flex-shrink-0">
-                  <PropLabel>Description</PropLabel>
-                  <p className="text-sm text-slate-700 leading-relaxed whitespace-pre-wrap">
-                    {selectedTicket.description}
-                  </p>
-                </div>
-
-                {/* Activity Feed */}
-                <div className="bg-[#f7f6f3] flex-1 px-5 py-4">
-                  <PropLabel>
-                    <span className="flex items-center gap-1.5">
-                      <Activity className="w-3 h-3" />
-                      Activity
-                    </span>
-                  </PropLabel>
-
-                  {/* Timeline */}
-                  <div className="relative pl-6 border-l-2 border-slate-200 ml-2 mt-3 space-y-0">
-
-                    {/* Ticket opened event */}
-                    <div className="flex items-center gap-3 py-1.5 -ml-[19px]">
-                      <div className="w-6 h-6 rounded-full bg-indigo-100 text-indigo-700 text-[10px] font-bold flex items-center justify-center shrink-0 ring-2 ring-white">
-                        {selectedTicket.creator?.name?.charAt(0)}
-                      </div>
-                      <span className="text-xs text-slate-500">
-                        <span className="font-semibold text-slate-700">
-                          {selectedTicket.creator?.name}
-                        </span>{" "}
-                        opened this ticket
-                      </span>
-                      <span className="text-xs text-slate-400 ml-auto shrink-0">
-                        {formatDateTime(selectedTicket.created_at)}
-                      </span>
-                    </div>
-
-                    {/* Messages */}
-                    {selectedTicket.messages?.map((msg: any) => {
-                      if (msg.type === "status_update" || msg.type === "approval") {
-                        return (
-                          <div key={msg.id} className="flex items-center gap-3 py-1.5 -ml-[13px]">
-                            <div className="w-4 h-4 rounded-full bg-white border-2 border-slate-300 flex items-center justify-center shrink-0">
-                              <div className="w-1.5 h-1.5 rounded-full bg-slate-400" />
-                            </div>
-                            <span className="text-xs text-slate-500">
-                              <span className="font-semibold text-slate-600">
-                                {msg.author.name}
-                              </span>{" "}
-                              {msg.content.toLowerCase()}
-                            </span>
-                            <span className="text-xs text-slate-400 ml-auto shrink-0">
-                              {formatDateTime(msg.created_at)}
-                            </span>
-                          </div>
-                        );
-                      }
-
-                      return (
-                        <div key={msg.id} className="py-2 -ml-[19px]">
-                          <div className="bg-white rounded-lg border border-slate-200 shadow-sm p-4 ml-2">
-                            <div className="flex items-start gap-3">
-                              <div className="w-7 h-7 rounded-full bg-indigo-100 text-indigo-700 text-xs font-bold flex items-center justify-center shrink-0">
-                                {msg.author.name.charAt(0)}
-                              </div>
-                              <div className="flex-1 min-w-0">
-                                <div className="flex items-baseline gap-2 mb-2 flex-wrap">
-                                  <span className="text-sm font-semibold text-slate-800">
-                                    {msg.author.name}
-                                  </span>
-                                  {msg.author.staff_id && (
-                                    <span className="text-xs text-slate-400 font-mono">
-                                      [{msg.author.staff_id}]
-                                    </span>
-                                  )}
-                                  <span className="text-xs text-slate-400 ml-auto shrink-0">
-                                    {formatDateTime(msg.created_at)}
-                                  </span>
-                                </div>
-                                <p className="text-sm text-slate-700 leading-relaxed whitespace-pre-wrap">
-                                  {msg.content}
-                                </p>
-                                {msg.attachment_name && (
-                                  <a
-                                    href={`${API_BASE}/tickets/messages/${msg.id}/attachment`}
-                                    target="_blank"
-                                    rel="noreferrer"
-                                    className="inline-flex items-center gap-1.5 mt-3 px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-md text-xs text-slate-600 hover:bg-slate-100 transition-colors"
-                                  >
-                                    <Paperclip className="w-3 h-3" />
-                                    {msg.attachment_name}
-                                    <Download className="w-3 h-3 opacity-50" />
-                                  </a>
-                                )}
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      );
-                    })}
-
-                    {selectedTicket.messages?.length === 0 && (
-                      <p className="text-xs text-slate-400 py-4">No activity yet.</p>
-                    )}
+                    <h1 className="text-base md:text-lg font-bold text-slate-900 leading-snug pr-2">
+                      {selectedTicket.title}
+                    </h1>
                   </div>
 
-                  {/* Add Comment */}
-                  <div className="bg-white rounded-lg border border-slate-200 shadow-sm p-4 mt-5">
-                    <PropLabel>Add Comment</PropLabel>
-                    {selectedFile && (
-                      <div className="mb-2">
-                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-slate-50 border border-slate-200 rounded text-xs text-slate-600">
-                          <Paperclip className="w-3 h-3" />
-                          <span className="max-w-[180px] truncate">{selectedFile.name}</span>
-                          <button onClick={() => setSelectedFile(null)}>
-                            <X className="w-3 h-3 ml-0.5 text-slate-400 hover:text-slate-700" />
-                          </button>
-                        </span>
-                      </div>
-                    )}
-                    <Textarea
-                      placeholder="Write a comment..."
-                      className="min-h-[80px] border-slate-200 text-sm resize-none focus-visible:ring-1 focus-visible:ring-slate-300"
-                      value={comment}
-                      onChange={(e) => setComment(e.target.value)}
-                    />
-                    <div className="flex justify-between items-center mt-3 pt-3 border-t border-slate-100">
-                      <div>
-                        <input
-                          type="file"
-                          id="file-upload"
-                          className="hidden"
-                          onChange={(e) => {
-                            if (e.target.files?.[0]) setSelectedFile(e.target.files[0]);
-                          }}
-                        />
-                        <label
-                          htmlFor="file-upload"
-                          className="cursor-pointer inline-flex items-center justify-center w-8 h-8 rounded text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors"
+                  {/* Action buttons */}
+                  <div className="flex flex-wrap gap-1.5 shrink-0 justify-end">
+                    {selectedTicket.approval_status === "pending" &&
+                      currentUserRole === "owner" && (
+                        <Button
+                          size="sm"
+                          className="bg-amber-500 hover:bg-amber-600 text-white h-8 text-xs px-3"
+                          onClick={() => approveTicketMutation.mutate()}
+                          disabled={approveTicketMutation.isPending}
                         >
-                          <Paperclip className="w-4 h-4" />
-                        </label>
-                      </div>
+                          <CheckCircle2 className="w-3.5 h-3.5 mr-1 md:mr-1.5" />
+                          <span className="hidden sm:inline">Approve</span>
+                        </Button>
+                      )}
+                    {selectedTicket.status !== "resolved" ? (
                       <Button
                         size="sm"
-                        className="h-8 text-xs"
-                        disabled={(!comment.trim() && !selectedFile) || postMessageMutation.isPending}
-                        onClick={() => postMessageMutation.mutate({ content: comment, file: selectedFile })}
+                        variant="outline"
+                        className="text-emerald-600 border-emerald-200 hover:bg-emerald-50 h-8 text-xs px-3"
+                        onClick={() => updateTicketMutation.mutate({ status: "resolved" })}
+                        disabled={updateTicketMutation.isPending}
                       >
-                        {postMessageMutation.isPending ? (
-                          <><Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />Posting…</>
-                        ) : (
-                          "Post Comment"
-                        )}
+                        <CheckCircle2 className="w-3.5 h-3.5 mr-1 md:mr-1.5" />
+                        <span className="hidden sm:inline">Resolve</span>
                       </Button>
-                    </div>
+                    ) : (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="text-amber-600 border-amber-200 hover:bg-amber-50 h-8 text-xs px-3"
+                        onClick={() => updateTicketMutation.mutate({ status: "open" })}
+                        disabled={updateTicketMutation.isPending}
+                      >
+                        <RotateCcw className="w-3.5 h-3.5 mr-1 md:mr-1.5" />
+                        <span className="hidden sm:inline">Re-open</span>
+                      </Button>
+                    )}
                   </div>
                 </div>
               </div>
 
-              {/* ── PROPERTIES PANEL ── */}
-              <div className="w-64 flex-shrink-0 border-l border-slate-200 bg-white overflow-y-auto hidden md:block">
-                <div className="p-4 space-y-4">
+              {/* ── MOBILE TAB BAR ── */}
+              <div className="md:hidden flex border-b border-slate-200 bg-white flex-shrink-0">
+                {(["activity", "details"] as const).map((tab) => (
+                  <button
+                    key={tab}
+                    onClick={() => setMobileTab(tab)}
+                    className={`flex-1 py-2.5 text-xs font-semibold border-b-2 transition-colors capitalize ${
+                      mobileTab === tab
+                        ? "border-indigo-500 text-indigo-600 bg-indigo-50/30"
+                        : "border-transparent text-slate-500 hover:text-slate-700"
+                    }`}
+                  >
+                    {tab}
+                  </button>
+                ))}
+              </div>
 
-                  {/* Status */}
-                  <div>
-                    <PropLabel>Status</PropLabel>
-                    <Badge
-                      className={`text-[10px] uppercase tracking-widest font-bold border px-2 py-0.5 ${getStatusColor(selectedTicket.status)}`}
-                    >
-                      {selectedTicket.status.replace("_", " ")}
-                    </Badge>
-                    {selectedTicket.approval_status === "pending" && (
-                      <Badge className="ml-1 text-[10px] uppercase tracking-widest font-bold bg-amber-50 text-amber-700 border border-amber-200 px-2 py-0.5">
-                        Pending
-                      </Badge>
-                    )}
-                  </div>
+              {/* ── CONTENT AREA (two columns on desktop, one tab on mobile) ── */}
+              <div className="flex-1 flex overflow-hidden min-h-0">
 
-                  {/* Priority */}
-                  <div>
-                    <PropLabel>Priority</PropLabel>
-                    <Select
-                      value={selectedTicket.priority}
-                      onValueChange={(val) => updateTicketMutation.mutate({ priority: val })}
-                      disabled={updateTicketMutation.isPending || selectedTicket.status === "resolved"}
-                    >
-                      <SelectTrigger className="h-8 w-full border-slate-200 text-xs bg-slate-50 hover:bg-slate-100">
-                        <div className="flex items-center gap-1.5">
-                          <div className={`w-2 h-2 rounded-full ${getPriorityDot(selectedTicket.priority)}`} />
-                          <span className="capitalize">{selectedTicket.priority}</span>
-                        </div>
-                      </SelectTrigger>
-                      <SelectContent>
-                        {["low", "medium", "high"].map((p) => (
-                          <SelectItem key={p} value={p} className="text-xs capitalize">
-                            {p.charAt(0).toUpperCase() + p.slice(1)}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  {/* Assignee */}
-                  <div>
-                    <PropLabel>Assignee</PropLabel>
-                    <Select
-                      value={assigneeId || "unassigned"}
-                      onValueChange={(val) =>
-                        updateTicketMutation.mutate({
-                          assigned_to_id: val === "unassigned" ? null : val,
-                        })
-                      }
-                      disabled={updateTicketMutation.isPending || selectedTicket.status === "resolved"}
-                    >
-                      <SelectTrigger className="h-8 w-full border-slate-200 text-xs bg-slate-50 hover:bg-slate-100">
-                        <div className="flex items-center gap-1.5 truncate">
-                          <div className="w-5 h-5 rounded-full bg-indigo-100 text-indigo-700 text-[10px] font-bold flex items-center justify-center shrink-0">
-                            {resolvedAssigneeName ? resolvedAssigneeName.replace(/\[.*?\]\s*/, "").charAt(0) : "?"}
-                          </div>
-                          <span className="truncate text-xs">
-                            {resolvedAssigneeName || "Unassigned"}
-                          </span>
-                        </div>
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="unassigned" className="text-xs">
-                          Unassigned
-                        </SelectItem>
-                        {allUsers
-                          ?.filter(
-                            (u: any) =>
-                              selectedTicket.rooms?.some((r: any) => u.room_ids?.includes(r.id)) ||
-                              u.id === assigneeId
-                          )
-                          .map((u: any) => (
-                            <SelectItem key={u.id} value={u.id} className="text-xs">
-                              {u.staff_id ? `[${u.staff_id}] ` : ""}
-                              {u.name}
-                            </SelectItem>
-                          ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  {/* Due Date – editable by anyone */}
-                  <div>
-                    <PropLabel>Due Date</PropLabel>
-                    <Input
-                      type="datetime-local"
-                      className="h-8 border-slate-200 text-xs bg-slate-50 hover:bg-slate-100"
-                      value={dueDate}
-                      onChange={(e) => setDueDate(e.target.value)}
-                      onBlur={handleDueDateBlur}
-                    />
-                    {isOverdue && (
-                      <p className="text-[10px] text-red-500 mt-1 font-bold uppercase tracking-wider">
-                        Overdue
-                      </p>
-                    )}
-                  </div>
-
-                  <Separator className="bg-slate-100" />
-
-                  {/* Rooms */}
-                  <div>
-                    <PropLabel>Rooms</PropLabel>
-                    <div className="flex flex-wrap gap-1">
-                      {selectedTicket.rooms?.length > 0 ? (
-                        selectedTicket.rooms.map((room: any) => (
-                          <Badge
-                            key={room.id}
-                            variant="secondary"
-                            className="bg-slate-100 text-slate-600 border border-slate-200 text-[10px] px-1.5 py-0.5 font-medium"
-                          >
-                            {room.name}
-                          </Badge>
-                        ))
-                      ) : (
-                        <span className="text-xs text-slate-400">None</span>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Escalate */}
-                  <div>
-                    <PropLabel>Escalate To</PropLabel>
-                    <Select
-                      value="placeholder"
-                      onValueChange={(val) => updateTicketMutation.mutate({ add_room_id: val })}
-                      disabled={updateTicketMutation.isPending || selectedTicket.status === "resolved"}
-                    >
-                      <SelectTrigger className="h-8 w-full border-slate-200 text-xs bg-slate-50 hover:bg-slate-100">
-                        <SelectValue placeholder="Add department…" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="placeholder" disabled className="text-xs">
-                          Select department…
-                        </SelectItem>
-                        {allRooms
-                          ?.filter(
-                            (r: any) => !selectedTicket.rooms?.some((tr: any) => tr.id === r.id)
-                          )
-                          .map((r: any) => (
-                            <SelectItem key={r.id} value={r.id} className="text-xs">
-                              {r.name}
-                            </SelectItem>
-                          ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <Separator className="bg-slate-100" />
-
-                  {/* Created By */}
-                  <div>
-                    <PropLabel>Created By</PropLabel>
-                    <div className="flex items-center gap-2 mt-0.5">
-                      <div className="w-7 h-7 rounded-full bg-slate-200 text-slate-700 text-xs font-bold flex items-center justify-center shrink-0">
-                        {selectedTicket.creator?.name?.charAt(0)}
-                      </div>
-                      <div className="min-w-0">
-                        <p className="text-sm font-semibold text-slate-800 truncate">
-                          {selectedTicket.creator?.name}
-                        </p>
-                        {selectedTicket.creator?.staff_id && (
-                          <p className="text-[10px] text-slate-400 font-mono">
-                            [{selectedTicket.creator.staff_id}]
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Opened */}
-                  <div>
-                    <PropLabel>Opened</PropLabel>
-                    <p className="text-xs text-slate-600 leading-relaxed">
-                      {formatDateTime(selectedTicket.created_at)}
+                {/* ── ACTIVITY COLUMN ── */}
+                <div
+                  className={`overflow-y-auto flex flex-col min-w-0 ${
+                    mobileTab === "details" ? "hidden md:flex md:flex-1" : "flex-1"
+                  }`}
+                >
+                  {/* Description */}
+                  <div className="bg-[#f7f6f3] border-b border-slate-200 px-4 md:px-5 py-4 flex-shrink-0">
+                    <PropLabel>Description</PropLabel>
+                    <p className="text-sm text-slate-700 leading-relaxed whitespace-pre-wrap">
+                      {selectedTicket.description}
                     </p>
                   </div>
-                </div>
-              </div>
 
+                  {/* Activity Feed */}
+                  <div className="bg-[#f7f6f3] flex-1 px-4 md:px-5 py-4">
+                    <PropLabel>
+                      <span className="flex items-center gap-1.5">
+                        <Activity className="w-3 h-3" />
+                        Activity
+                      </span>
+                    </PropLabel>
+
+                    {/* Timeline */}
+                    <div className="relative pl-5 md:pl-6 border-l-2 border-slate-200 ml-1.5 md:ml-2 mt-3">
+
+                      {/* Ticket opened */}
+                      <div className="flex items-center gap-2 md:gap-3 py-1.5 -ml-[17px] md:-ml-[19px]">
+                        <div className="w-6 h-6 rounded-full bg-indigo-100 text-indigo-700 text-[10px] font-bold flex items-center justify-center shrink-0 ring-2 ring-white">
+                          {selectedTicket.creator?.name?.charAt(0)}
+                        </div>
+                        <span className="text-xs text-slate-500 min-w-0">
+                          <span className="font-semibold text-slate-700">
+                            {selectedTicket.creator?.name}
+                          </span>{" "}
+                          opened this ticket
+                        </span>
+                        <span className="text-[10px] text-slate-400 ml-auto shrink-0 hidden sm:block">
+                          {formatDateTime(selectedTicket.created_at)}
+                        </span>
+                      </div>
+
+                      {/* Messages */}
+                      {selectedTicket.messages?.map((msg: any) => {
+                        if (msg.type === "status_update" || msg.type === "approval") {
+                          return (
+                            <div
+                              key={msg.id}
+                              className="flex items-center gap-2 md:gap-3 py-1.5 -ml-[11px] md:-ml-[13px]"
+                            >
+                              <div className="w-4 h-4 rounded-full bg-white border-2 border-slate-300 flex items-center justify-center shrink-0">
+                                <div className="w-1.5 h-1.5 rounded-full bg-slate-400" />
+                              </div>
+                              <span className="text-xs text-slate-500 min-w-0 truncate">
+                                <span className="font-semibold text-slate-600">
+                                  {msg.author.name}
+                                </span>{" "}
+                                {msg.content.toLowerCase()}
+                              </span>
+                              <span className="text-[10px] text-slate-400 ml-auto shrink-0 hidden sm:block">
+                                {formatDateTime(msg.created_at)}
+                              </span>
+                            </div>
+                          );
+                        }
+
+                        return (
+                          <div key={msg.id} className="py-2 -ml-[17px] md:-ml-[19px]">
+                            <div className="bg-white rounded-lg border border-slate-200 shadow-sm p-3 md:p-4 ml-2">
+                              <div className="flex items-start gap-2 md:gap-3">
+                                <div className="w-7 h-7 rounded-full bg-indigo-100 text-indigo-700 text-xs font-bold flex items-center justify-center shrink-0">
+                                  {msg.author.name.charAt(0)}
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-baseline gap-2 mb-1.5 flex-wrap">
+                                    <span className="text-sm font-semibold text-slate-800">
+                                      {msg.author.name}
+                                    </span>
+                                    {msg.author.staff_id && (
+                                      <span className="text-xs text-slate-400 font-mono">
+                                        [{msg.author.staff_id}]
+                                      </span>
+                                    )}
+                                    <span className="text-[10px] text-slate-400 ml-auto shrink-0">
+                                      {formatDateTime(msg.created_at)}
+                                    </span>
+                                  </div>
+                                  <p className="text-sm text-slate-700 leading-relaxed whitespace-pre-wrap break-words">
+                                    {msg.content}
+                                  </p>
+                                  {msg.attachment_name && (
+                                    <button
+                                      onClick={() => downloadAttachment(msg.id, msg.attachment_name)}
+                                      className="inline-flex items-center gap-1.5 mt-2 px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-md text-xs text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer"
+                                    >
+                                      <Paperclip className="w-3 h-3 shrink-0" />
+                                      <span className="truncate max-w-[160px]">{msg.attachment_name}</span>
+                                      <Download className="w-3 h-3 opacity-50 shrink-0" />
+                                    </button>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+
+                      {selectedTicket.messages?.length === 0 && (
+                        <p className="text-xs text-slate-400 py-4">No activity yet.</p>
+                      )}
+                    </div>
+
+                    {/* Add Comment */}
+                    <div className="bg-white rounded-lg border border-slate-200 shadow-sm p-3 md:p-4 mt-4">
+                      <PropLabel>Add Comment</PropLabel>
+                      {selectedFile && (
+                        <div className="mb-2">
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-slate-50 border border-slate-200 rounded text-xs text-slate-600">
+                            <Paperclip className="w-3 h-3 shrink-0" />
+                            <span className="max-w-[140px] md:max-w-[180px] truncate">{selectedFile.name}</span>
+                            <button onClick={() => setSelectedFile(null)}>
+                              <X className="w-3 h-3 ml-0.5 text-slate-400 hover:text-slate-700" />
+                            </button>
+                          </span>
+                        </div>
+                      )}
+                      <Textarea
+                        placeholder="Write a comment..."
+                        className="min-h-[80px] border-slate-200 text-sm resize-none focus-visible:ring-1 focus-visible:ring-slate-300"
+                        value={comment}
+                        onChange={(e) => setComment(e.target.value)}
+                      />
+                      <div className="flex justify-between items-center mt-3 pt-3 border-t border-slate-100">
+                        <div>
+                          <input
+                            type="file"
+                            id="file-upload"
+                            className="hidden"
+                            onChange={(e) => {
+                              if (e.target.files?.[0]) setSelectedFile(e.target.files[0]);
+                            }}
+                          />
+                          <label
+                            htmlFor="file-upload"
+                            className="cursor-pointer inline-flex items-center justify-center w-8 h-8 rounded text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors"
+                          >
+                            <Paperclip className="w-4 h-4" />
+                          </label>
+                        </div>
+                        <Button
+                          size="sm"
+                          className="h-8 text-xs"
+                          disabled={(!comment.trim() && !selectedFile) || postMessageMutation.isPending}
+                          onClick={() =>
+                            postMessageMutation.mutate({ content: comment, file: selectedFile })
+                          }
+                        >
+                          {postMessageMutation.isPending ? (
+                            <>
+                              <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
+                              Posting…
+                            </>
+                          ) : (
+                            "Post Comment"
+                          )}
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* ── PROPERTIES PANEL ── */}
+                <div
+                  className={`flex-shrink-0 bg-white overflow-y-auto border-slate-200 ${
+                    mobileTab === "details"
+                      ? "flex-1 border-t-0 md:flex-none md:w-64 md:border-l"
+                      : "hidden md:block md:w-64 md:border-l"
+                  }`}
+                >
+                  <PropertiesContent />
+                </div>
+
+              </div>
             </div>
           ) : null}
         </div>

@@ -48,7 +48,13 @@ def get_tickets(
     - Manager/HR/IT: See created by them or assigned to them.
     - Staff: See ONLY assigned to them.
     """
-    query = db.query(models.Ticket).filter(models.Ticket.is_active == True)
+    from sqlalchemy.orm import selectinload
+    query = db.query(models.Ticket).filter(models.Ticket.is_active == True).options(
+        selectinload(models.Ticket.creator).selectinload(models.Employee.room_memberships),
+        selectinload(models.Ticket.creator).selectinload(models.Employee.assigned_tickets),
+        selectinload(models.Ticket.assignee).selectinload(models.Employee.room_memberships),
+        selectinload(models.Ticket.assignee).selectinload(models.Employee.assigned_tickets),
+    )
 
     # Subquery to find tickets linked to universal rooms
     universal_room_tickets = (
@@ -117,6 +123,7 @@ def create_ticket(
         creator_id=current_user.id,
         approval_status=approval_status,
         assigned_to_id=ticket_in.assigned_to_id,
+        due_date=ticket_in.due_date,
     )
     db.add(ticket)
     db.flush()  # flush to get ticket ID
@@ -247,8 +254,19 @@ def get_message_attachment(
     # Check access to ticket
     ticket = db.query(models.Ticket).filter(models.Ticket.id == message.ticket_id).first()
     if current_user.role != "owner":
-        if ticket.creator_id != current_user.id and ticket.assigned_to_id != current_user.id:
-            raise HTTPException(status_code=403, detail="Not authorized to view this ticket")
+        # Check if user is creator or assignee
+        is_creator_or_assignee = (ticket.creator_id == current_user.id or ticket.assigned_to_id == current_user.id)
+        
+        # Check if user belongs to any of the rooms the ticket is linked to
+        ticket_room_ids = {link.room_id for link in ticket.room_links}
+        user_room_ids = {m.room_id for m in current_user.room_memberships}
+        has_room_access = bool(ticket_room_ids & user_room_ids)
+        
+        # Check if it's in a universal room
+        is_universal = any(link.room.type == models.RoomType.universal for link in ticket.room_links)
+        
+        if not is_creator_or_assignee and not has_room_access and not is_universal:
+            raise HTTPException(status_code=403, detail="Not authorized to access this attachment")
 
     return Response(
         content=message.attachment_data,

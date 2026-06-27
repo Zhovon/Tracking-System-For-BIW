@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useEffect, Fragment } from "react";
 import { supabase } from "@/lib/supabase";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export default function NotificationsPage() {
   const queryClient = useQueryClient();
@@ -60,8 +61,26 @@ export default function NotificationsPage() {
 
   if (status === "pending") {
     return (
-      <div className="flex-1 flex items-center justify-center bg-slate-50">
-        <Loader2 className="w-8 h-8 animate-spin text-indigo-500" />
+      <div className="flex-1 flex justify-center bg-slate-50 overflow-y-auto w-full">
+        <div className="w-full max-w-2xl bg-white shadow-sm min-h-full border-x border-slate-200">
+          <div className="p-4 md:p-6 border-b border-slate-200 bg-white sticky top-0 z-10">
+            <h2 className="text-xl font-bold flex items-center gap-2 text-slate-800">
+              <Bell className="w-6 h-6 text-indigo-500" />
+              Notifications
+            </h2>
+          </div>
+          <div className="divide-y divide-slate-100 animate-pulse">
+            {[...Array(6)].map((_, i) => (
+              <div key={i} className="p-4 md:p-5 flex gap-4">
+                <div className="flex-1 space-y-2">
+                  <Skeleton className="h-4.5 w-5/6 bg-slate-200" />
+                  <Skeleton className="h-3 w-28 bg-slate-200" />
+                </div>
+                <Skeleton className="w-6 h-6 rounded-full bg-slate-200" />
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
     );
   }
