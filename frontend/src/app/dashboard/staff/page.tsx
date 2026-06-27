@@ -15,13 +15,17 @@ export default function StaffManagementPage() {
   const queryClient = useQueryClient();
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
   
   const [formData, setFormData] = useState({
     name: "",
     email: "",
     password: "",
     role: "therapist",
-    room_ids: [] as string[]
+    room_ids: [] as string[],
+    phone: "",
+    nid: "",
+    joining_date: ""
   });
 
   // Check if current user is owner (in real app, we'd check their role token)
@@ -36,7 +40,7 @@ export default function StaffManagementPage() {
   });
 
   const [editingUser, setEditingUser] = useState<any>(null);
-  const [editFormData, setEditFormData] = useState({ name: "", email: "", password: "", role: "", room_ids: [] as string[] });
+  const [editFormData, setEditFormData] = useState({ name: "", email: "", password: "", role: "", room_ids: [] as string[], phone: "", nid: "", joining_date: "" });
 
   const [roomFormData, setRoomFormData] = useState({ name: "", type: "branch" });
   const [roomSuccess, setRoomSuccess] = useState(false);
@@ -81,7 +85,10 @@ export default function StaffManagementPage() {
       email: user.email,
       password: "",
       role: user.role,
-      room_ids: user.room_ids || []
+      room_ids: user.room_ids || [],
+      phone: user.phone || "",
+      nid: user.nid || "",
+      joining_date: user.joining_date || ""
     });
     setEditingUser(user);
   };
@@ -91,7 +98,7 @@ export default function StaffManagementPage() {
     onSuccess: () => {
       setSuccess(true);
       setError(null);
-      setFormData({ name: "", email: "", password: "", role: "therapist", room_ids: [] });
+      setFormData({ name: "", email: "", password: "", role: "therapist", room_ids: [], phone: "", nid: "", joining_date: "" });
       queryClient.invalidateQueries({ queryKey: ['admin-users'] });
       setTimeout(() => setSuccess(false), 5000);
     },
@@ -105,6 +112,19 @@ export default function StaffManagementPage() {
     e.preventDefault();
     createMutation.mutate(formData);
   };
+
+  const filteredUsers = users?.filter((user: any) => {
+    const q = searchQuery.toLowerCase().trim();
+    if (!q) return true;
+    return (
+      (user.name && user.name.toLowerCase().includes(q)) ||
+      (user.staff_id && user.staff_id.toLowerCase().includes(q)) ||
+      (user.email && user.email.toLowerCase().includes(q)) ||
+      (user.phone && user.phone.toLowerCase().includes(q)) ||
+      (user.nid && user.nid.toLowerCase().includes(q)) ||
+      (user.joining_date && user.joining_date.toLowerCase().includes(q))
+    );
+  });
 
   return (
     <>
@@ -177,6 +197,21 @@ export default function StaffManagementPage() {
                         <SelectItem value="cleaner">Cleaner</SelectItem>
                       </SelectContent>
                     </Select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="text-xs font-medium text-slate-700">Phone Number</label>
+                    <Input placeholder="e.g. 017XXXXXXXX" value={formData.phone} onChange={(e) => setFormData({...formData, phone: e.target.value})} className="bg-slate-50 border-slate-200 text-slate-900" />
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="text-xs font-medium text-slate-700">NID / Birth Certificate Number</label>
+                    <Input placeholder="e.g. 2864914250" value={formData.nid} onChange={(e) => setFormData({...formData, nid: e.target.value})} className="bg-slate-50 border-slate-200 text-slate-900" />
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="text-xs font-medium text-slate-700">Joining Date</label>
+                    <Input placeholder="e.g. 20 August 2024" value={formData.joining_date} onChange={(e) => setFormData({...formData, joining_date: e.target.value})} className="bg-slate-50 border-slate-200 text-slate-900" />
                   </div>
 
                   <div className="space-y-2">
@@ -280,6 +315,14 @@ export default function StaffManagementPage() {
             <CardHeader>
               <CardTitle className="text-xl text-slate-900">Active Staff Directory</CardTitle>
               <CardDescription className="text-slate-500">All users currently in the system.</CardDescription>
+              <div className="mt-4">
+                <Input
+                  placeholder="Search by name, ID, email, phone, or NID/Birth Certificate..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="bg-slate-50 border-slate-200 text-slate-900"
+                />
+              </div>
             </CardHeader>
             <CardContent>
               {loadingUsers ? (
@@ -299,7 +342,7 @@ export default function StaffManagementPage() {
                 </div>
               ) : (
                 <div className="max-h-[640px] overflow-y-auto pr-2 flex flex-col gap-3 custom-scrollbar">
-                  {users?.map((user: any) => (
+                  {filteredUsers?.map((user: any) => (
                     <div key={user.id} className={`p-4 rounded-xl border ${user.has_penalty ? 'border-red-200 bg-red-50/50 hover:bg-red-50' : 'border-slate-200 bg-slate-50/50 hover:bg-slate-50'} flex flex-col sm:flex-row sm:items-start sm:items-center justify-between gap-3 transition-colors`}>
                       <div className="flex flex-col min-w-0">
                         <div className="flex items-center gap-2">
@@ -314,6 +357,14 @@ export default function StaffManagementPage() {
                           )}
                         </div>
                         <p className="text-sm text-slate-500 truncate">{user.email}</p>
+                        
+                        {/* Display phone, NID, and joining date */}
+                        <div className="text-xs text-slate-500 mt-1.5 flex flex-wrap gap-x-4 gap-y-1">
+                          {user.phone && <span className="flex items-center gap-1">📞 {user.phone}</span>}
+                          {user.nid && <span className="flex items-center gap-1">🪪 NID/Cert: {user.nid}</span>}
+                          {user.joining_date && <span className="flex items-center gap-1">📅 Hired: {user.joining_date}</span>}
+                        </div>
+
                         {user.has_penalty && user.penalty_reasons?.length > 0 && (
                           <div className="mt-2 flex flex-col gap-1">
                             {user.penalty_reasons.map((reason: string, i: number) => (
@@ -386,6 +437,18 @@ export default function StaffManagementPage() {
                   </Select>
                 </div>
                 <div className="space-y-2">
+                  <label className="text-xs font-medium text-slate-700">Phone Number</label>
+                  <Input value={editFormData.phone} onChange={(e) => setEditFormData({...editFormData, phone: e.target.value})} className="bg-slate-50" />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-xs font-medium text-slate-700">NID / Birth Certificate Number</label>
+                  <Input value={editFormData.nid} onChange={(e) => setEditFormData({...editFormData, nid: e.target.value})} className="bg-slate-50" />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-xs font-medium text-slate-700">Joining Date</label>
+                  <Input value={editFormData.joining_date} onChange={(e) => setEditFormData({...editFormData, joining_date: e.target.value})} className="bg-slate-50" />
+                </div>
+                <div className="space-y-2">
                   <label className="text-xs font-medium text-slate-700">Assign to Branch(es)</label>
                   <div className="border border-slate-200 bg-slate-50 rounded-md p-3 max-h-48 overflow-y-auto space-y-2">
                     {rooms?.map((r: any) => (
@@ -418,6 +481,9 @@ export default function StaffManagementPage() {
                     if(editFormData.password) payload.password = editFormData.password;
                     if(editFormData.role) payload.role = editFormData.role;
                     if(editFormData.room_ids && editFormData.room_ids.length > 0) payload.room_ids = editFormData.room_ids;
+                    payload.phone = editFormData.phone;
+                    payload.nid = editFormData.nid;
+                    payload.joining_date = editFormData.joining_date;
                     updateMutation.mutate({ id: editingUser.id, payload });
                   }}
                 >

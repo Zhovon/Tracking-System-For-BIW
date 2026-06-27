@@ -16,6 +16,9 @@ class Employee(Base):
     email = Column(String, unique=True, index=True)
     name = Column(String)
     role = Column(String)
+    phone = Column(String, nullable=True)
+    nid = Column(String, nullable=True)
+    joining_date = Column(String, nullable=True)
     is_active = Column(Boolean, default=True)
     created_at = Column(DateTime, default=datetime.utcnow)
 

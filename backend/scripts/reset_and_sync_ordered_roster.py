@@ -11,34 +11,34 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from supabase import Client, create_client
 
 ROSTER = [
-    {"name": "Tamanna", "email": "ayshatamanna96@gmail.com", "phone": "01971319176", "role": "manager", "joining": "20 August 2024", "password": "BiwStaff2000!"},
-    {"name": "Akhi Khan", "email": "akhi45651@gmail.com", "phone": "01758679900", "role": "manager", "joining": "28 February 2023", "password": "BiwStaff1998!"},
-    {"name": "Nova", "email": "farihanova03@gmail.com", "phone": "01908027282", "role": "manager", "joining": "7 February 2026", "password": "BiwStaff2000!"},
-    {"name": "Sharmin Akter", "email": "sharmin07717@gmail.com", "phone": "01883376681", "role": "therapist", "joining": "15 June 2026", "password": "BiwStaff2002!"},
-    {"name": "Shahanaj", "email": "doashaharaz93@gmail.com", "phone": "01781874346", "role": "therapist", "joining": "19 April 2026", "password": "BiwStaff2001!"},
-    {"name": "Moitree", "email": "mmoitree605@gmail.com", "phone": "01581488173", "role": "therapist", "joining": "11 January 2023", "password": "BiwStaff2002!"},
-    {"name": "Rabina", "email": "rabinahaque29@gmail.com", "phone": "01600580204", "role": "therapist", "joining": "11 January 2023", "password": "BiwStaff2002!"},
-    {"name": "Anjuman", "email": "anjumanaktar540@gmail.com", "phone": "01320368639", "role": "therapist", "joining": "1 November 2024", "password": "BiwStaff2001!"},
-    {"name": "Rima", "email": "darothitripura@gmail.com", "phone": "01318383279", "role": "therapist", "joining": "1 June 2023", "password": "BiwStaff1995!"},
-    {"name": "Ajmeri", "email": "angelazmir5060@gmail.com", "phone": "01736715396", "role": "therapist", "joining": "1 November 2025", "password": "BiwStaff2000!"},
-    {"name": "Helena", "email": "nitikattripura@gmail.com", "phone": "01840626458", "role": "therapist", "joining": "1 June 2023", "password": "BiwStaff1997!"},
-    {"name": "Ishikha", "email": "khumbatripura@gmail.com", "phone": "01627753206", "role": "therapist", "joining": "6 March 2024", "password": "BiwStaff2001!"},
-    {"name": "Runa", "email": "sangmarahul604@gmail.com", "phone": "01580738658", "role": "therapist", "joining": "6 March 2024", "password": "BiwStaff1995!"},
-    {"name": "Dichi", "email": "dichimree99@gmail.com", "phone": "01722745259", "role": "therapist", "joining": "1 December 2024", "password": "BiwStaff1995!"},
-    {"name": "Sobita", "email": "sobitripura98@gmail.com", "phone": "01841152879", "role": "therapist", "joining": "13 October 2025", "password": "BiwStaff1998!"},
-    {"name": "Kajoli", "email": "kajolysangma@gmail.com", "phone": "01903411357", "role": "therapist", "joining": "16 October 2025", "password": "BiwStaff1999!"},
-    {"name": "Baby", "email": "babysangma650@gmail.com", "phone": "01942904689", "role": "therapist", "joining": "10 June 2025", "password": "BiwStaff2003!"},
-    {"name": "Eti", "email": "dofoety@gmail.com", "phone": "01406948581", "role": "therapist", "joining": "17 June 2025", "password": "BiwStaff1997!"},
-    {"name": "Sonia", "email": "sonia@biw.com", "phone": "01302540310", "role": "therapist", "joining": "4 February 2026", "password": "BiwStaff1995!"},
-    {"name": "Rani", "email": "santitripura687@gmail.com", "phone": "01572707764", "role": "therapist", "joining": "7 November 2024", "password": "BiwStaff2004!"},
-    {"name": "Mili", "email": "milimrong357@gmail.com", "phone": "01774709094", "role": "therapist", "joining": "1 December 2024", "password": "BiwStaff1998!"},
-    {"name": "Borsha", "email": "borsharunam80@gmail.com", "phone": "01740642824", "role": "therapist", "joining": "11 December 2024", "password": "BiwStaff2005!"},
-    {"name": "Lipi", "email": "anikhawee556@gmail.com", "phone": "01610598572", "role": "therapist", "joining": "11 December 2024", "password": "BiwStaff1997!"},
-    {"name": "Munni", "email": "titanongrin@gmail.com", "phone": "01992515770", "role": "therapist", "joining": "4 June 2026", "password": "BiwStaff2008!"},
-    {"name": "Konika", "email": "khankonika692@gmail.com", "phone": "01340145602", "role": "cleaner", "joining": "6 October 2025", "password": "BiwStaff2007!"},
-    {"name": "Popy", "email": "pppju0243@gmail.com", "phone": "01301116582", "role": "cleaner", "joining": "6 October 2025", "password": "BiwStaff2011!"},
-    {"name": "Samia", "email": "samiaakterbd2011@gmail.com", "phone": "01839297670", "role": "cleaner", "joining": "25 April 2026", "password": "BiwStaff2005!"},
-    {"name": "Takmina", "email": "dhdhdhdjddhh658@gmail.com", "phone": "01863180726", "role": "cleaner", "joining": "25 April 2026", "password": "BiwStaff2007!"}
+    {"name": "Tamanna", "email": "ayshatamanna96@gmail.com", "phone": "01971319176", "role": "manager", "joining": "20 August 2024", "password": "BiwStaff2000!", "nid": "2864914250"},
+    {"name": "Akhi Khan", "email": "akhi45651@gmail.com", "phone": "01758679900", "role": "manager", "joining": "28 February 2023", "password": "BiwStaff1998!", "nid": "8731478593"},
+    {"name": "Nova", "email": "farihanova03@gmail.com", "phone": "01908027282", "role": "manager", "joining": "7 February 2026", "password": "BiwStaff2000!", "nid": "2861264139"},
+    {"name": "Sharmin Akter", "email": "sharmin07717@gmail.com", "phone": "01883376681", "role": "therapist", "joining": "15 June 2026", "password": "BiwStaff2002!", "nid": "6460821488"},
+    {"name": "Shahanaj", "email": "doashaharaz93@gmail.com", "phone": "01781874346", "role": "therapist", "joining": "19 April 2026", "password": "BiwStaff2001!", "nid": "2868916566"},
+    {"name": "Moitree", "email": "mmoitree605@gmail.com", "phone": "01581488173", "role": "therapist", "joining": "11 January 2023", "password": "BiwStaff2002!", "nid": ""},
+    {"name": "Rabina", "email": "rabinahaque29@gmail.com", "phone": "01600580204", "role": "therapist", "joining": "11 January 2023", "password": "BiwStaff2002!", "nid": "2002611317616944"},
+    {"name": "Anjuman", "email": "anjumanaktar540@gmail.com", "phone": "01320368639", "role": "therapist", "joining": "1 November 2024", "password": "BiwStaff2001!", "nid": "1513946708"},
+    {"name": "Rima", "email": "darothitripura@gmail.com", "phone": "01318383279", "role": "therapist", "joining": "1 June 2023", "password": "BiwStaff1995!", "nid": "8706329425"},
+    {"name": "Ajmeri", "email": "angelazmir5060@gmail.com", "phone": "01736715396", "role": "therapist", "joining": "1 November 2025", "password": "BiwStaff2000!", "nid": "4212976981"},
+    {"name": "Helena", "email": "nitikattripura@gmail.com", "phone": "01840626458", "role": "therapist", "joining": "1 June 2023", "password": "BiwStaff1997!", "nid": "19970319152001750"},
+    {"name": "Ishikha", "email": "khumbatripura@gmail.com", "phone": "01627753206", "role": "therapist", "joining": "6 March 2024", "password": "BiwStaff2001!", "nid": "6918896124"},
+    {"name": "Runa", "email": "sangmarahul604@gmail.com", "phone": "01580738658", "role": "therapist", "joining": "6 March 2024", "password": "BiwStaff1995!", "nid": "19956111631000037"},
+    {"name": "Dichi", "email": "dichimree99@gmail.com", "phone": "01722745259", "role": "therapist", "joining": "1 December 2024", "password": "BiwStaff1995!", "nid": "6137021071"},
+    {"name": "Sobita", "email": "sobitripura98@gmail.com", "phone": "01841152879", "role": "therapist", "joining": "13 October 2025", "password": "BiwStaff1998!", "nid": "4667659868"},
+    {"name": "Kajoli", "email": "kajolysangma@gmail.com", "phone": "01903411357", "role": "therapist", "joining": "16 October 2025", "password": "BiwStaff1999!", "nid": "2856306309"},
+    {"name": "Baby", "email": "babysangma650@gmail.com", "phone": "01942904689", "role": "therapist", "joining": "10 June 2025", "password": "BiwStaff2003!", "nid": "3773685395"},
+    {"name": "Eti", "email": "dofoety@gmail.com", "phone": "01406948581", "role": "therapist", "joining": "17 June 2025", "password": "BiwStaff1997!", "nid": "2851950366"},
+    {"name": "Sonia", "email": "sonia@biw.com", "phone": "01302540310", "role": "therapist", "joining": "4 February 2026", "password": "BiwStaff1995!", "nid": "19966111610115828"},
+    {"name": "Rani", "email": "santitripura687@gmail.com", "phone": "01572707764", "role": "therapist", "joining": "7 November 2024", "password": "BiwStaff2004!", "nid": "7368863580"},
+    {"name": "Mili", "email": "milimrong357@gmail.com", "phone": "01774709094", "role": "therapist", "joining": "1 December 2024", "password": "BiwStaff1998!", "nid": ""},
+    {"name": "Borsha", "email": "borsharunam80@gmail.com", "phone": "01740642824", "role": "therapist", "joining": "11 December 2024", "password": "BiwStaff2005!", "nid": "1974921619"},
+    {"name": "Lipi", "email": "anikhawee556@gmail.com", "phone": "01610598572", "role": "therapist", "joining": "11 December 2024", "password": "BiwStaff1997!", "nid": "601425436"},
+    {"name": "Munni", "email": "titanongrin@gmail.com", "phone": "01992515770", "role": "therapist", "joining": "4 June 2026", "password": "BiwStaff2008!", "nid": "20098917075112187"},
+    {"name": "Konika", "email": "khankonika692@gmail.com", "phone": "01340145602", "role": "cleaner", "joining": "6 October 2025", "password": "BiwStaff2007!", "nid": "20070695126000051"},
+    {"name": "Popy", "email": "pppju0243@gmail.com", "phone": "01301116582", "role": "cleaner", "joining": "6 October 2025", "password": "BiwStaff2011!", "nid": ""},
+    {"name": "Samia", "email": "samiaakterbd2011@gmail.com", "phone": "01839297670", "role": "cleaner", "joining": "25 April 2026", "password": "BiwStaff2005!", "nid": ""},
+    {"name": "Takmina", "email": "dhdhdhdjddhh658@gmail.com", "phone": "01863180726", "role": "cleaner", "joining": "25 April 2026", "password": "BiwStaff2007!", "nid": ""}
 ]
 
 # Parsed chronological mapping
@@ -203,9 +203,14 @@ def reset_and_sync():
             res = supabase.table("employees").select("id").eq("email", email).execute()
             if res.data:
                 uid = res.data[0]["id"]
-                # Update staff_id in local DB
-                supabase.table("employees").update({"staff_id": staff_id_str}).eq("id", uid).execute()
-                print(f"Assigned staff_id {staff_id_str} to {name} ({email})")
+                # Update staff_id, phone, nid, joining_date in local DB
+                supabase.table("employees").update({
+                    "staff_id": staff_id_str,
+                    "phone": phone,
+                    "nid": emp.get("nid", ""),
+                    "joining_date": joining
+                }).eq("id", uid).execute()
+                print(f"Assigned staff_id {staff_id_str} and fields to {name} ({email})")
                 
                 # Push to sheet
                 payload = {

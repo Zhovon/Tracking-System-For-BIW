@@ -14,7 +14,7 @@ from app.config import settings
 router = APIRouter()
 
 
-def sync_user_to_google_sheet(action: str, email: str, name: str = "", role: str = "", password: str = ""):
+def sync_user_to_google_sheet(action: str, email: str, name: str = "", role: str = "", password: str = "", uid: str = "", phn_num: str = "", joining_date: str = ""):
     webhook_url = os.getenv("GOOGLE_SHEET_WEBHOOK_URL")
     if not webhook_url:
         return
@@ -24,7 +24,10 @@ def sync_user_to_google_sheet(action: str, email: str, name: str = "", role: str
             "email": email,
             "name": name,
             "role": role,
-            "password": password
+            "password": password,
+            "uid": uid,
+            "phn_num": phn_num,
+            "joining_date": joining_date
         }
         # Send post request to Apps Script Web App
         response = httpx.post(webhook_url, json=payload, timeout=10.0)
@@ -105,6 +108,9 @@ def create_user(
             email=user_in.email,
             name=user_in.name,
             role=user_in.role,
+            phone=user_in.phone,
+            nid=user_in.nid,
+            joining_date=user_in.joining_date,
         )
         db.add(employee)
 
@@ -124,7 +130,10 @@ def create_user(
             email=employee.email,
             name=employee.name,
             role=employee.role,
-            password=user_in.password
+            password=user_in.password,
+            uid=str(employee.id),
+            phn_num=employee.phone if employee.phone else "",
+            joining_date=employee.joining_date if employee.joining_date else ""
         )
 
         return employee
@@ -178,6 +187,12 @@ def update_user(
         if user_in.role is not None:
             user_metadata["role"] = user_in.role
             employee.role = user_in.role
+        if user_in.phone is not None:
+            employee.phone = user_in.phone
+        if user_in.nid is not None:
+            employee.nid = user_in.nid
+        if user_in.joining_date is not None:
+            employee.joining_date = user_in.joining_date
 
         if user_metadata:
             update_data["user_metadata"] = user_metadata
@@ -206,7 +221,10 @@ def update_user(
             email=employee.email,
             name=employee.name,
             role=employee.role,
-            password=user_in.password if user_in.password else ""
+            password=user_in.password if user_in.password else "",
+            uid=str(employee.id),
+            phn_num=employee.phone if employee.phone else "",
+            joining_date=employee.joining_date if employee.joining_date else ""
         )
 
         return employee

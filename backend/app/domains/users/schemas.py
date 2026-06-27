@@ -10,6 +10,9 @@ class UserOut(BaseModel):
     name: str
     email: str
     role: str
+    phone: Optional[str] = None
+    nid: Optional[str] = None
+    joining_date: Optional[str] = None
     room_ids: List[UUID] = []
     has_penalty: bool = False
     penalty_reasons: List[str] = []
@@ -23,6 +26,9 @@ class UserCreate(BaseModel):
     password: str
     role: str
     room_ids: List[UUID]
+    phone: Optional[str] = None
+    nid: Optional[str] = None
+    joining_date: Optional[str] = None
 
 
 class UserUpdate(BaseModel):
@@ -31,3 +37,6 @@ class UserUpdate(BaseModel):
     role: Optional[str] = None
     password: Optional[str] = None
     room_ids: Optional[List[UUID]] = None
+    phone: Optional[str] = None
+    nid: Optional[str] = None
+    joining_date: Optional[str] = None
