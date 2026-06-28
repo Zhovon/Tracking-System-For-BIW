@@ -182,7 +182,7 @@ def create_user(
             name=employee.name,
             role=employee.role,
             password=user_in.password,
-            uid=str(employee.id),
+            uid=employee.staff_id,
             phn_num=employee.phone if employee.phone else "",
             joining_date=employee.joining_date if employee.joining_date else ""
         )
@@ -321,7 +321,7 @@ def update_user(
             name=employee.name,
             role=employee.role,
             password=user_in.password if user_in.password else "",
-            uid=str(employee.id),
+            uid=employee.staff_id,
             phn_num=employee.phone if employee.phone else "",
             joining_date=employee.joining_date if employee.joining_date else ""
         )
