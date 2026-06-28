@@ -45,11 +45,39 @@ def get_current_user_profile(current_user: models.Employee = Depends(get_current
 
 
 @router.get("", response_model=List[schemas.UserOut])
-def get_users(db: Session = Depends(get_db)) -> Any:
+def get_users(
+    db: Session = Depends(get_db),
+    current_user: models.Employee = Depends(get_current_user),
+) -> Any:
     """
-    Get all employees for assignment dropdowns.
+    Get all employees. Scoped by role:
+    - Owners, HR, IT Support, Executives see all.
+    - Managers see only employees sharing branch rooms they manage.
     """
-    return db.query(models.Employee).filter(models.Employee.is_active == True).all()
+    if current_user.role in ["owner", "hr", "it_team", "executive"]:
+        return db.query(models.Employee).filter(models.Employee.is_active == True).all()
+    elif current_user.role == "manager":
+        # Find all branch rooms this manager is a member of
+        manager_branch_ids = [
+            m.room_id for m in current_user.room_memberships
+            if m.room.type == models.RoomType.branch
+        ]
+        if not manager_branch_ids:
+            return []
+
+        # Query employees belonging to these branch rooms
+        return (
+            db.query(models.Employee)
+            .join(models.RoomMember, models.Employee.id == models.RoomMember.employee_id)
+            .filter(
+                models.Employee.is_active == True,
+                models.RoomMember.room_id.in_(manager_branch_ids),
+            )
+            .distinct()
+            .all()
+        )
+    else:
+        return db.query(models.Employee).filter(models.Employee.is_active == True).all()
 
 
 
@@ -70,8 +98,31 @@ def create_user(
 
     from fastapi import HTTPException
     from supabase import Client, create_client
-    if current_user.role != "owner":
-        raise HTTPException(status_code=403, detail="Only owners can create new staff accounts")
+    if current_user.role not in ["owner", "manager"]:
+        raise HTTPException(status_code=403, detail="Only owners and managers can create new staff accounts")
+
+    if current_user.role == "manager":
+        # Managers can only create standard non-admin staff roles (therapist, cleaner, it_team)
+        if user_in.role in ["owner", "manager", "hr", "executive"]:
+            raise HTTPException(
+                status_code=403,
+                detail="Managers can only create standard staff (therapist, cleaner, or IT Support)"
+            )
+
+        # Managers must assign staff to branches they are members of
+        manager_branch_ids = [
+            m.room_id for m in current_user.room_memberships
+            if m.room.type == models.RoomType.branch
+        ]
+        if not user_in.room_ids:
+            raise HTTPException(status_code=400, detail="Managers must assign new staff to at least one branch")
+
+        for r_id in user_in.room_ids:
+            if r_id not in manager_branch_ids:
+                raise HTTPException(
+                    status_code=403,
+                    detail="Managers can only assign staff to branches they manage"
+                )
 
     supabase_url = settings.SUPABASE_URL
     supabase_key = settings.SUPABASE_SERVICE_ROLE_KEY
@@ -160,12 +211,43 @@ def update_user(
         raise HTTPException(status_code=404, detail="User not found")
 
     if current_user.role != "owner":
-        if current_user.id != user_id:
-            raise HTTPException(status_code=403, detail="Not authorized to edit this account")
-        if user_in.role is not None and user_in.role != employee.role:
-            raise HTTPException(status_code=403, detail="Not authorized to change your own role")
-        if user_in.room_ids is not None:
-            raise HTTPException(status_code=403, detail="Not authorized to change your own branch assignments")
+        if current_user.role == "manager":
+            # Managers can edit standard staff in branches they manage
+            manager_branch_ids = [
+                m.room_id for m in current_user.room_memberships
+                if m.room.type == models.RoomType.branch
+            ]
+
+            # Check if target employee shares a branch with the manager
+            has_common_branch = db.query(models.RoomMember).filter(
+                models.RoomMember.employee_id == employee.id,
+                models.RoomMember.room_id.in_(manager_branch_ids)
+            ).first() is not None
+
+            if not has_common_branch:
+                raise HTTPException(status_code=403, detail="Not authorized to edit staff outside your branch")
+
+            # Managers cannot edit other managers or owners
+            if employee.role in ["owner", "manager"] and current_user.id != user_id:
+                raise HTTPException(status_code=403, detail="Managers cannot edit owner or other manager accounts")
+
+            # If changing role, manager can only assign standard staff roles
+            if user_in.role is not None and user_in.role in ["owner", "manager", "hr", "executive"]:
+                raise HTTPException(status_code=403, detail="Managers cannot assign administrative or manager roles")
+
+            # If changing branches, manager can only assign rooms they manage
+            if user_in.room_ids is not None:
+                for r_id in user_in.room_ids:
+                    if r_id not in manager_branch_ids:
+                        raise HTTPException(status_code=403, detail="Managers can only assign staff to branches they manage")
+        else:
+            # Standard employees editing their own accounts
+            if current_user.id != user_id:
+                raise HTTPException(status_code=403, detail="Not authorized to edit this account")
+            if user_in.role is not None and user_in.role != employee.role:
+                raise HTTPException(status_code=403, detail="Not authorized to change your own role")
+            if user_in.room_ids is not None:
+                raise HTTPException(status_code=403, detail="Not authorized to change your own branch assignments")
 
     supabase_url = os.getenv("SUPABASE_URL")
     supabase_key = os.getenv("SUPABASE_SERVICE_ROLE_KEY")
@@ -204,10 +286,27 @@ def update_user(
             employee.email = user_in.email
 
         if user_in.room_ids is not None:
+            if current_user.role == "manager":
+                manager_branch_ids = [
+                    m.room_id for m in current_user.room_memberships
+                    if m.room.type == models.RoomType.branch
+                ]
+                # Non-managed room IDs: keep them!
+                existing_non_managed = db.query(models.RoomMember).filter(
+                    models.RoomMember.employee_id == employee.id,
+                    ~models.RoomMember.room_id.in_(manager_branch_ids)
+                ).all()
+                non_managed_ids = [m.room_id for m in existing_non_managed]
+
+                # Full merged list
+                final_room_ids = list(set(non_managed_ids + user_in.room_ids))
+            else:
+                final_room_ids = user_in.room_ids
+
             db.query(models.RoomMember).filter(
                 models.RoomMember.employee_id == employee.id
             ).delete()
-            for r_id in user_in.room_ids:
+            for r_id in final_room_ids:
                 new_membership = models.RoomMember(employee_id=employee.id, room_id=r_id)
                 db.add(new_membership)
 
@@ -245,12 +344,30 @@ def delete_user(
     """
     Delete a staff user. Soft deletes local record, hard deletes Supabase auth record.
     """
-    if current_user.role != "owner":
-        raise HTTPException(status_code=403, detail="Only owners can delete staff accounts")
+    if current_user.role not in ["owner", "manager"]:
+        raise HTTPException(status_code=403, detail="Only owners and managers can delete staff accounts")
 
     employee = db.query(models.Employee).filter(models.Employee.id == user_id).first()
     if not employee:
         raise HTTPException(status_code=404, detail="User not found")
+
+    if current_user.role == "manager":
+        # Managers cannot delete owners or other managers
+        if employee.role in ["owner", "manager"]:
+            raise HTTPException(status_code=403, detail="Managers cannot delete owner or manager accounts")
+
+        # Verify the target employee shares a branch with the manager
+        manager_branch_ids = [
+            m.room_id for m in current_user.room_memberships
+            if m.room.type == models.RoomType.branch
+        ]
+        has_common_branch = db.query(models.RoomMember).filter(
+            models.RoomMember.employee_id == employee.id,
+            models.RoomMember.room_id.in_(manager_branch_ids)
+        ).first() is not None
+
+        if not has_common_branch:
+            raise HTTPException(status_code=403, detail="Not authorized to delete staff outside your branch")
 
     supabase_url = os.getenv("SUPABASE_URL")
     supabase_key = os.getenv("SUPABASE_SERVICE_ROLE_KEY")

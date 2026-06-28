@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { createUser, updateUser, deleteUser, fetchAllRooms, fetchAllUsers, createRoom } from "@/lib/api";
+import { createUser, updateUser, deleteUser, fetchAllRooms, fetchAllUsers, createRoom, fetchCurrentUser } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -62,7 +62,25 @@ export default function StaffManagementPage() {
       setRoomSuccess(false);
     },
   });
-  const currentUserRole = "owner"; // Assumed owner role for this restricted page
+  const { data: currentUser } = useQuery({
+    queryKey: ["currentUser"],
+    queryFn: fetchCurrentUser,
+  });
+
+  const currentUserRole = currentUser?.role || "employee";
+
+  // Find IDs of branch rooms this manager belongs to
+  const managerBranchIds = rooms
+    ?.filter((room: any) => room.type === "branch" && currentUser?.room_ids?.includes(room.id))
+    ?.map((room: any) => room.id) || [];
+
+  const selectableRooms = rooms?.filter((room: any) => {
+    if (currentUserRole === "owner") return true;
+    if (currentUserRole === "manager") {
+      return room.type === "branch" && managerBranchIds.includes(room.id);
+    }
+    return false;
+  }) || [];
 
   const updateMutation = useMutation({
     mutationFn: (data: any) => updateUser(data.id, data.payload),
@@ -190,10 +208,14 @@ export default function StaffManagementPage() {
                       </SelectTrigger>
                       <SelectContent className="bg-white border-slate-200 text-slate-900">
                         <SelectItem value="therapist">Therapist</SelectItem>
-                        <SelectItem value="manager">Branch Manager</SelectItem>
-                        <SelectItem value="hr">HR</SelectItem>
+                        {currentUserRole === "owner" && (
+                          <>
+                            <SelectItem value="manager">Branch Manager</SelectItem>
+                            <SelectItem value="hr">HR</SelectItem>
+                            <SelectItem value="executive">Executive</SelectItem>
+                          </>
+                        )}
                         <SelectItem value="it_team">IT Support</SelectItem>
-                        <SelectItem value="executive">Executive</SelectItem>
                         <SelectItem value="cleaner">Cleaner</SelectItem>
                       </SelectContent>
                     </Select>
@@ -217,7 +239,7 @@ export default function StaffManagementPage() {
                   <div className="space-y-2">
                     <label className="text-xs font-medium text-slate-700">Initial Branch(es) / Department(s)</label>
                     <div className="border border-slate-200 bg-slate-50 rounded-md p-3 max-h-48 overflow-y-auto space-y-2">
-                      {rooms?.map((r: any) => (
+                      {selectableRooms?.map((r: any) => (
                         <label key={r.id} className="flex items-center gap-2 cursor-pointer text-sm text-slate-700">
                           <input
                             type="checkbox"
@@ -233,7 +255,7 @@ export default function StaffManagementPage() {
                           {r.name} ({r.type})
                         </label>
                       ))}
-                      {(!rooms || rooms.length === 0) && <p className="text-xs text-slate-500">No rooms available.</p>}
+                      {(!selectableRooms || selectableRooms.length === 0) && <p className="text-xs text-slate-500">No rooms available.</p>}
                     </div>
                   </div>
 
@@ -245,69 +267,71 @@ export default function StaffManagementPage() {
               </CardContent>
             </Card>
 
-            <Card className="bg-white border-slate-200 shadow-sm">
-              <CardHeader>
-                <CardTitle className="text-xl text-slate-900">Create Room</CardTitle>
-                <CardDescription className="text-slate-500">Add a new department or branch (e.g. Doctors).</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <form
-                  onSubmit={(e) => {
-                    e.preventDefault();
-                    if (!roomFormData.name.trim()) return;
-                    createRoomMutation.mutate(roomFormData);
-                  }}
-                  className="space-y-4"
-                >
-                  {roomError && (
-                    <Alert variant="destructive" className="bg-red-500/10 border-red-500/20 text-red-400 p-3">
-                      <AlertCircle className="h-4 w-4" />
-                      <AlertDescription className="text-xs">{roomError}</AlertDescription>
-                    </Alert>
-                  )}
-                  {roomSuccess && (
-                    <Alert className="bg-green-500/10 border-green-500/20 text-green-400 p-3">
-                      <CheckCircle2 className="h-4 w-4" />
-                      <AlertDescription className="text-xs">Room created successfully.</AlertDescription>
-                    </Alert>
-                  )}
-                  <div className="space-y-2">
-                    <label className="text-xs font-medium text-slate-700">Room Name</label>
-                    <Input
-                      required
-                      placeholder="e.g. Doctors"
-                      value={roomFormData.name}
-                      onChange={(e) => setRoomFormData({ ...roomFormData, name: e.target.value })}
-                      className="bg-slate-50 border-slate-200 text-slate-900"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-xs font-medium text-slate-700">Room Type</label>
-                    <Select value={roomFormData.type} onValueChange={(val) => setRoomFormData({ ...roomFormData, type: val || "branch" })}>
-                      <SelectTrigger className="bg-slate-50 border-slate-200 text-slate-900">
-                        <SelectValue placeholder="Select type" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="branch">Branch</SelectItem>
-                        <SelectItem value="department">Department</SelectItem>
-                        <SelectItem value="founder">Founder</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <Button
-                    type="submit"
-                    disabled={createRoomMutation.isPending}
-                    className="w-full bg-indigo-500 hover:bg-indigo-600 text-white mt-2"
+            {currentUserRole === "owner" && (
+              <Card className="bg-white border-slate-200 shadow-sm">
+                <CardHeader>
+                  <CardTitle className="text-xl text-slate-900">Create Room</CardTitle>
+                  <CardDescription className="text-slate-500">Add a new department or branch (e.g. Doctors).</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <form
+                    onSubmit={(e) => {
+                      e.preventDefault();
+                      if (!roomFormData.name.trim()) return;
+                      createRoomMutation.mutate(roomFormData);
+                    }}
+                    className="space-y-4"
                   >
-                    {createRoomMutation.isPending ? (
-                      <><Loader2 className="h-4 w-4 animate-spin mr-2" />Creating…</>
-                    ) : (
-                      "Create Room"
+                    {roomError && (
+                      <Alert variant="destructive" className="bg-red-500/10 border-red-500/20 text-red-400 p-3">
+                        <AlertCircle className="h-4 w-4" />
+                        <AlertDescription className="text-xs">{roomError}</AlertDescription>
+                      </Alert>
                     )}
-                  </Button>
-                </form>
-              </CardContent>
-            </Card>
+                    {roomSuccess && (
+                      <Alert className="bg-green-500/10 border-green-500/20 text-green-400 p-3">
+                        <CheckCircle2 className="h-4 w-4" />
+                        <AlertDescription className="text-xs">Room created successfully.</AlertDescription>
+                      </Alert>
+                    )}
+                    <div className="space-y-2">
+                      <label className="text-xs font-medium text-slate-700">Room Name</label>
+                      <Input
+                        required
+                        placeholder="e.g. Doctors"
+                        value={roomFormData.name}
+                        onChange={(e) => setRoomFormData({ ...roomFormData, name: e.target.value })}
+                        className="bg-slate-50 border-slate-200 text-slate-900"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-xs font-medium text-slate-700">Room Type</label>
+                      <Select value={roomFormData.type} onValueChange={(val) => setRoomFormData({ ...roomFormData, type: val || "branch" })}>
+                        <SelectTrigger className="bg-slate-50 border-slate-200 text-slate-900">
+                          <SelectValue placeholder="Select type" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="branch">Branch</SelectItem>
+                          <SelectItem value="department">Department</SelectItem>
+                          <SelectItem value="founder">Founder</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <Button
+                      type="submit"
+                      disabled={createRoomMutation.isPending}
+                      className="w-full bg-indigo-500 hover:bg-indigo-600 text-white mt-2"
+                    >
+                      {createRoomMutation.isPending ? (
+                        <><Loader2 className="h-4 w-4 animate-spin mr-2" />Creating…</>
+                      ) : (
+                        "Create Room"
+                      )}
+                    </Button>
+                  </form>
+                </CardContent>
+              </Card>
+            )}
           </div>
 
           {/* Right Column (Active Staff Directory) */}
@@ -379,7 +403,8 @@ export default function StaffManagementPage() {
                         <span className="bg-white px-3 py-1 rounded-md text-xs font-medium capitalize text-slate-600 border border-slate-200 shadow-sm inline-block">
                           {user.role.replace('_', ' ')}
                         </span>
-                        {currentUserRole === "owner" && (
+                        {(currentUserRole === "owner" || 
+                          (currentUserRole === "manager" && user.role !== "owner" && user.role !== "manager" && user.id !== currentUser?.id)) && (
                           <div className="flex gap-1 border-l border-slate-200 pl-3">
                             <button onClick={() => handleEditClick(user)} className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-md transition-colors" title="Edit User">
                               <Edit2 className="w-4 h-4" />
@@ -428,10 +453,14 @@ export default function StaffManagementPage() {
                     <SelectTrigger className="bg-slate-50"><SelectValue placeholder="Select role" /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="therapist">Therapist</SelectItem>
-                      <SelectItem value="manager">Branch Manager</SelectItem>
-                      <SelectItem value="hr">HR</SelectItem>
+                      {currentUserRole === "owner" && (
+                        <>
+                          <SelectItem value="manager">Branch Manager</SelectItem>
+                          <SelectItem value="hr">HR</SelectItem>
+                          <SelectItem value="executive">Executive</SelectItem>
+                        </>
+                      )}
                       <SelectItem value="it_team">IT Support</SelectItem>
-                      <SelectItem value="executive">Executive</SelectItem>
                       <SelectItem value="cleaner">Cleaner</SelectItem>
                     </SelectContent>
                   </Select>
@@ -451,7 +480,7 @@ export default function StaffManagementPage() {
                 <div className="space-y-2">
                   <label className="text-xs font-medium text-slate-700">Assign to Branch(es)</label>
                   <div className="border border-slate-200 bg-slate-50 rounded-md p-3 max-h-48 overflow-y-auto space-y-2">
-                    {rooms?.map((r: any) => (
+                    {selectableRooms?.map((r: any) => (
                       <label key={r.id} className="flex items-center gap-2 cursor-pointer text-sm text-slate-700">
                         <input
                           type="checkbox"
@@ -467,7 +496,7 @@ export default function StaffManagementPage() {
                         {r.name} ({r.type})
                       </label>
                     ))}
-                    {(!rooms || rooms.length === 0) && <p className="text-xs text-slate-500">No rooms available.</p>}
+                    {(!selectableRooms || selectableRooms.length === 0) && <p className="text-xs text-slate-500">No rooms available.</p>}
                   </div>
                 </div>
                 

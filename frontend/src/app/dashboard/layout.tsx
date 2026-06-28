@@ -232,7 +232,7 @@ export default function DashboardLayout({
               </Link>
             ))}
 
-            {currentUser?.role === "owner" && (
+            {(currentUser?.role === "owner" || currentUser?.role === "manager") && (
               <>
                 <div className="my-4 border-t border-slate-200"></div>
                 <h2 className="px-3 text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
@@ -338,7 +338,7 @@ export default function DashboardLayout({
                 {room.name}
               </Link>
             ))}
-            {currentUser?.role === "owner" && (
+            {(currentUser?.role === "owner" || currentUser?.role === "manager") && (
               <>
                 <div className="mx-4 my-2 border-t border-slate-100"></div>
                 <Link
