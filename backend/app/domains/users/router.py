@@ -132,6 +132,16 @@ def create_user(
 
     supabase_admin: Client = create_client(supabase_url, supabase_key)
 
+    # Pre-flight: check if email already exists in local DB
+    existing = db.query(models.Employee).filter(
+        models.Employee.email == user_in.email.lower().strip()
+    ).first()
+    if existing:
+        raise HTTPException(
+            status_code=400,
+            detail=f"An account with the email '{user_in.email}' already exists in the system."
+        )
+
     try:
         # Create user in Supabase Auth
         # Admin API bypasses signup restrictions and email confirmation
@@ -189,8 +199,84 @@ def create_user(
 
         return employee
 
+    except HTTPException:
+        raise
     except Exception as e:
         db.rollback()
+        err_str = str(e).lower()
+        # Supabase Auth already has this email (ghost/orphaned account from testing/imports)
+        # but our local DB has no record — recover by reusing the existing Auth UUID
+        if "already been registered" in err_str or "already registered" in err_str or "email address" in err_str:
+            try:
+                # Find the existing auth user by email
+                all_users = supabase_admin.auth.admin.list_users()
+                user_list = all_users if isinstance(all_users, list) else getattr(all_users, "users", [])
+                existing_auth = next((u for u in user_list if u.email == user_in.email), None)
+
+                if not existing_auth:
+                    raise HTTPException(
+                        status_code=400,
+                        detail=f"Email '{user_in.email}' is blocked in the auth system. Please contact IT support to resolve."
+                    )
+
+                # Update the auth user's password and metadata to match what was requested
+                supabase_admin.auth.admin.update_user_by_id(
+                    str(existing_auth.id),
+                    {
+                        "password": user_in.password,
+                        "email_confirm": True,
+                        "user_metadata": {"name": user_in.name, "role": user_in.role}
+                    }
+                )
+
+                # Generate a new staff_id for the recovered account
+                from sqlalchemy import text
+                seq_val = db.execute(text("SELECT nextval('staff_id_seq')")).scalar()
+                staff_id_str = str(seq_val).zfill(4)
+
+                # Create a fresh local DB record using the existing Auth UUID
+                employee = models.Employee(
+                    id=uuid.UUID(str(existing_auth.id)),
+                    staff_id=staff_id_str,
+                    email=user_in.email,
+                    name=user_in.name,
+                    role=user_in.role,
+                    phone=user_in.phone,
+                    nid=user_in.nid,
+                    joining_date=user_in.joining_date,
+                )
+                db.add(employee)
+
+                if user_in.room_ids:
+                    for r_id in user_in.room_ids:
+                        db.add(models.RoomMember(employee_id=employee.id, room_id=r_id))
+
+                db.commit()
+                db.refresh(employee)
+
+                background_tasks.add_task(
+                    sync_user_to_google_sheet,
+                    action="create",
+                    email=employee.email,
+                    name=employee.name,
+                    role=employee.role,
+                    password=user_in.password,
+                    uid=employee.staff_id,
+                    phn_num=employee.phone if employee.phone else "",
+                    joining_date=employee.joining_date if employee.joining_date else ""
+                )
+
+                return employee
+
+            except HTTPException:
+                raise
+            except Exception as recovery_err:
+                db.rollback()
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Could not recover orphaned account for '{user_in.email}': {recovery_err}"
+                )
+
         raise HTTPException(status_code=400, detail=str(e))
 
 

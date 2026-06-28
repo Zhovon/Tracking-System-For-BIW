@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { getRoleLabel } from "@/app/dashboard/layout";
 import { createUser, updateUser, deleteUser, fetchAllRooms, fetchAllUsers, createRoom, fetchCurrentUser } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -213,6 +214,7 @@ export default function StaffManagementPage() {
                             <SelectItem value="manager">Branch Manager</SelectItem>
                             <SelectItem value="hr">HR</SelectItem>
                             <SelectItem value="executive">Executive</SelectItem>
+                            <SelectItem value="head_of_business">Head of Business Service &amp; Relationship</SelectItem>
                           </>
                         )}
                         <SelectItem value="it_team">IT Support</SelectItem>
@@ -401,7 +403,7 @@ export default function StaffManagementPage() {
                       </div>
                       <div className="flex items-center gap-3 flex-shrink-0">
                         <span className="bg-white px-3 py-1 rounded-md text-xs font-medium capitalize text-slate-600 border border-slate-200 shadow-sm inline-block">
-                          {user.role.replace('_', ' ')}
+                          {getRoleLabel(user.role)}
                         </span>
                         {(currentUserRole === "owner" || 
                           (currentUserRole === "manager" && user.role !== "owner" && user.role !== "manager" && user.id !== currentUser?.id)) && (
@@ -458,6 +460,7 @@ export default function StaffManagementPage() {
                           <SelectItem value="manager">Branch Manager</SelectItem>
                           <SelectItem value="hr">HR</SelectItem>
                           <SelectItem value="executive">Executive</SelectItem>
+                          <SelectItem value="head_of_business">Head of Business Service &amp; Relationship</SelectItem>
                         </>
                       )}
                       <SelectItem value="it_team">IT Support</SelectItem>

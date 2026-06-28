@@ -13,6 +13,20 @@ import { Skeleton } from "@/components/ui/skeleton";
 
 export const getSlug = (name: string) => name.toLowerCase().replace(/[^a-z0-9]+/g, '-');
 
+const ROLE_LABELS: Record<string, string> = {
+  owner:                 "Owner",
+  manager:               "Branch Manager",
+  hr:                    "HR",
+  it_team:               "IT Support",
+  executive:             "Executive",
+  head_of_business:      "Head of Business Service & Relationship",
+  therapist:             "Therapist",
+  cleaner:               "Cleaner",
+};
+
+export const getRoleLabel = (role: string) =>
+  ROLE_LABELS[role] ?? role.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+
 export default function DashboardLayout({
   children,
 }: {
@@ -253,7 +267,7 @@ export default function DashboardLayout({
         <div className="p-4 border-t border-slate-200 bg-slate-50 flex items-center justify-between">
           <div className="flex flex-col">
             <span className="text-sm font-medium text-slate-800">{currentUser?.name}</span>
-            <span className="text-xs text-slate-500 capitalize">{currentUser?.role.replace('_', ' ')}</span>
+            <span className="text-xs text-slate-500">{getRoleLabel(currentUser?.role ?? '')}</span>
           </div>
           <div className="flex gap-1">
             <ChangePasswordDialog>
@@ -367,7 +381,7 @@ export default function DashboardLayout({
               {currentUser?.name?.charAt(0)}
             </div>
             <h2 className="text-lg font-bold text-slate-800">{currentUser?.name}</h2>
-            <p className="text-sm text-slate-500 capitalize mb-6">{currentUser?.role.replace('_', ' ')}</p>
+            <p className="text-sm text-slate-500 mb-6">{getRoleLabel(currentUser?.role ?? '')}</p>
             
             <div className="w-full space-y-2">
               <ChangePasswordDialog />
