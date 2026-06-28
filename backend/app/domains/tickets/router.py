@@ -135,11 +135,26 @@ def create_ticket(
 
     # Notify all Owners
     owners = db.query(models.Employee).filter(models.Employee.role == "owner").all()
+
+    # Get assignee name if exists
+    assignee_name = ""
+    if ticket.assigned_to_id:
+        assignee = db.query(models.Employee).filter(models.Employee.id == ticket.assigned_to_id).first()
+        if assignee:
+            assignee_name = assignee.name
+
     for owner in owners:
         if owner.id != current_user.id:
+            if ticket.approval_status == models.ApprovalStatus.pending:
+                msg = f"New ticket requires approval: {ticket.title}"
+            elif assignee_name:
+                msg = f"New ticket created (assigned to {assignee_name}): {ticket.title}"
+            else:
+                msg = f"New ticket created: {ticket.title}"
+
             db.add(models.Notification(
                 user_id=owner.id,
-                message=f"New ticket created: {ticket.title}"
+                message=msg
             ))
 
     # Notify Assignee
@@ -364,6 +379,15 @@ def update_ticket(
                         message=f"You have been assigned to ticket: {ticket.title}"
                     ))
 
+                # Notify all Owners
+                owners = db.query(models.Employee).filter(models.Employee.role == "owner").all()
+                for owner in owners:
+                    if owner.id != current_user.id:
+                        db.add(models.Notification(
+                            user_id=owner.id,
+                            message=f"Ticket '{ticket.title}' assigned to {assignee.name}"
+                        ))
+
     if "due_date" in ticket_in.model_fields_set and ticket_in.due_date != ticket.due_date:
         ticket.due_date = ticket_in.due_date
         if ticket_in.due_date:
@@ -434,6 +458,20 @@ def approve_ticket(
         type=models.MessageType.approval,
     )
     db.add(system_msg)
+
+    # Notify creator
+    if ticket.creator_id and ticket.creator_id != current_user.id:
+        db.add(models.Notification(
+            user_id=ticket.creator_id,
+            message=f"Your ticket has been approved: {ticket.title}"
+        ))
+
+    # Notify assignee
+    if ticket.assigned_to_id and ticket.assigned_to_id != current_user.id:
+        db.add(models.Notification(
+            user_id=ticket.assigned_to_id,
+            message=f"Approved ticket assigned to you: {ticket.title}"
+        ))
 
     db.commit()
     db.refresh(ticket)

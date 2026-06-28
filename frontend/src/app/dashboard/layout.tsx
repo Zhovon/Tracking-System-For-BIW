@@ -153,7 +153,7 @@ export default function DashboardLayout({
                   <div key={notif.id} className={`p-3 text-sm flex gap-3 ${notif.is_read ? 'opacity-60' : 'bg-indigo-50/50'}`}>
                     <div className="flex-1">
                       <p className="text-slate-800">{notif.message}</p>
-                      <p className="text-xs text-slate-400 mt-1">{new Date(notif.created_at).toLocaleString()}</p>
+                      <p className="text-xs text-slate-400 mt-1">{new Date(notif.created_at.endsWith("Z") || notif.created_at.includes("+") ? notif.created_at : notif.created_at + "Z").toLocaleString()}</p>
                     </div>
                     {!notif.is_read && (
                       <button 
@@ -395,7 +395,7 @@ export default function DashboardLayout({
                   <div key={notif.id} className={`p-4 rounded-xl text-sm flex gap-3 ${notif.is_read ? 'opacity-60 bg-slate-50' : 'bg-indigo-50 border border-indigo-100'}`}>
                     <div className="flex-1">
                       <p className="text-slate-800">{notif.message}</p>
-                      <p className="text-xs text-slate-400 mt-2">{new Date(notif.created_at).toLocaleString()}</p>
+                      <p className="text-xs text-slate-400 mt-2">{new Date(notif.created_at.endsWith("Z") || notif.created_at.includes("+") ? notif.created_at : notif.created_at + "Z").toLocaleString()}</p>
                     </div>
                     {!notif.is_read && (
                       <button 

@@ -124,7 +124,7 @@ export default function NotificationsPage() {
                     {notif.message}
                   </p>
                   <p className="text-xs text-slate-400 mt-2 font-medium">
-                    {new Date(notif.created_at).toLocaleString()}
+                    {new Date(notif.created_at.endsWith("Z") || notif.created_at.includes("+") ? notif.created_at : notif.created_at + "Z").toLocaleString()}
                   </p>
                 </div>
                 {!notif.is_read && (
