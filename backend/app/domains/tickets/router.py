@@ -101,10 +101,14 @@ def get_tickets(
         query = query.join(models.TicketRoom).filter(models.TicketRoom.room_id == room_id)
 
     if assignee_staff_id:
-        # Join assignee to filter by their staff_id tag
+        search_pattern = f"%{assignee_staff_id.strip()}%"
+        # Join assignee to filter by their staff_id tag or their name
         query = query.join(
             models.Employee, models.Ticket.assigned_to_id == models.Employee.id
-        ).filter(models.Employee.staff_id == assignee_staff_id)
+        ).filter(
+            models.Employee.staff_id.ilike(search_pattern) |
+            models.Employee.name.ilike(search_pattern)
+        )
 
     if status:
         try:

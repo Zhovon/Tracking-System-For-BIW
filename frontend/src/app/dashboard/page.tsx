@@ -346,6 +346,9 @@ function DashboardContent() {
                   value={assigneeSearch}
                   onChange={(e) => setAssigneeSearch(e.target.value)}
                   onKeyDown={(e) => e.stopPropagation()}
+                  onPointerDown={(e) => e.stopPropagation()}
+                  onMouseDown={(e) => e.stopPropagation()}
+                  onClick={(e) => e.stopPropagation()}
                   className="h-8 text-xs mb-1 bg-slate-50 focus:bg-white"
                 />
               </div>
@@ -510,7 +513,7 @@ function DashboardContent() {
           <div className="relative">
             <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
             <Input
-              placeholder="Search by Staff ID"
+              placeholder="Search by Staff ID or Name"
               value={filterStaffId}
               onChange={(e) => setFilterStaffId(e.target.value)}
               className="pl-8 h-8 bg-white text-sm border-slate-200"

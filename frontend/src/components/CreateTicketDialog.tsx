@@ -150,6 +150,9 @@ export function CreateTicketDialog({ roomId }: { roomId?: string | null }) {
                       value={assigneeSearch}
                       onChange={(e) => setAssigneeSearch(e.target.value)}
                       onKeyDown={(e) => e.stopPropagation()}
+                      onPointerDown={(e) => e.stopPropagation()}
+                      onMouseDown={(e) => e.stopPropagation()}
+                      onClick={(e) => e.stopPropagation()}
                       className="h-8 text-xs mb-1 bg-slate-50 focus:bg-white"
                     />
                   </div>
