@@ -137,18 +137,20 @@ export function CreateTicketDialog({ roomId }: { roomId?: string | null }) {
                 setAssigneeOpen(open);
                 if (!open) setAssigneeSearch("");
               }}>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    role="combobox"
-                    aria-expanded={assigneeOpen}
-                    disabled={!selectedRoomId}
-                    className="w-full justify-between font-normal text-slate-700 bg-white border-slate-200"
-                  >
-                    {assignedToId && assignedToId !== "none"
-                      ? filteredUsers.find((u: any) => u.id === assignedToId)?.name 
-                      : (selectedRoomId ? "Select an assignee (Optional)" : "Select a room first")}
-                  </Button>
+                <PopoverTrigger
+                  render={
+                    <Button
+                      variant="outline"
+                      role="combobox"
+                      aria-expanded={assigneeOpen}
+                      disabled={!selectedRoomId}
+                      className="w-full justify-between font-normal text-slate-700 bg-white border-slate-200"
+                    />
+                  }
+                >
+                  {assignedToId && assignedToId !== "none"
+                    ? filteredUsers.find((u: any) => u.id === assignedToId)?.name 
+                    : (selectedRoomId ? "Select an assignee (Optional)" : "Select a room first")}
                 </PopoverTrigger>
                 <PopoverContent className="w-[300px] p-0" align="start">
                   <Command shouldFilter={false}>

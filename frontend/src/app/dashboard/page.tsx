@@ -322,25 +322,27 @@ function DashboardContent() {
             setAssigneeOpen(open);
             if (!open) setAssigneeSearch("");
           }}>
-            <PopoverTrigger asChild>
-              <Button
-                variant="outline"
-                role="combobox"
-                aria-expanded={assigneeOpen}
-                disabled={updateTicketMutation.isPending || selectedTicket!.status === "resolved"}
-                className="h-8 w-full justify-between border-slate-200 text-xs bg-slate-50 hover:bg-slate-100 font-normal px-3"
-              >
-                <div className="flex items-center gap-1.5 truncate">
-                  <div className="w-5 h-5 rounded-full bg-indigo-100 text-indigo-700 text-[10px] font-bold flex items-center justify-center shrink-0">
-                    {resolvedAssigneeName
-                      ? resolvedAssigneeName.replace(/\[.*?\]\s*/, "").charAt(0)
-                      : "?"}
-                  </div>
-                  <span className="truncate text-xs">
-                    {resolvedAssigneeName || "Unassigned"}
-                  </span>
+            <PopoverTrigger
+              render={
+                <Button
+                  variant="outline"
+                  role="combobox"
+                  aria-expanded={assigneeOpen}
+                  disabled={updateTicketMutation.isPending || selectedTicket!.status === "resolved"}
+                  className="h-8 w-full justify-between border-slate-200 text-xs bg-slate-50 hover:bg-slate-100 font-normal px-3"
+                />
+              }
+            >
+              <div className="flex items-center gap-1.5 truncate">
+                <div className="w-5 h-5 rounded-full bg-indigo-100 text-indigo-700 text-[10px] font-bold flex items-center justify-center shrink-0">
+                  {resolvedAssigneeName
+                    ? resolvedAssigneeName.replace(/\[.*?\]\s*/, "").charAt(0)
+                    : "?"}
                 </div>
-              </Button>
+                <span className="truncate text-xs">
+                  {resolvedAssigneeName || "Unassigned"}
+                </span>
+              </div>
             </PopoverTrigger>
             <PopoverContent className="w-[250px] p-0" align="start">
               <Command shouldFilter={false}>
