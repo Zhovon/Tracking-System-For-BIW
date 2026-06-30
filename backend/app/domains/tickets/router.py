@@ -398,13 +398,13 @@ def update_ticket(
                 )
                 db.add(system_msg)
                 ticket.assigned_to_id = assignee.id
-                
+
                 # Add new assignee to ticket participants if not already
                 is_existing_participant = db.query(models.TicketParticipant).filter(
                     models.TicketParticipant.ticket_id == ticket.id,
                     models.TicketParticipant.employee_id == assignee.id
                 ).first() is not None
-                
+
                 if not is_existing_participant:
                     db.add(models.TicketParticipant(ticket_id=ticket.id, employee_id=assignee.id))
 
