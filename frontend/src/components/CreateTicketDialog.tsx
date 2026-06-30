@@ -19,6 +19,7 @@ export function CreateTicketDialog({ roomId }: { roomId?: string | null }) {
   const [dueDate, setDueDate] = useState("");
   const [selectedRoomId, setSelectedRoomId] = useState<string>(roomId || "");
   const [assignedToId, setAssignedToId] = useState<string>("");
+  const [assigneeSearch, setAssigneeSearch] = useState("");
   const queryClient = useQueryClient();
 
   const { data: rooms } = useQuery({ queryKey: ["allRooms"], queryFn: fetchAllRooms });
@@ -129,17 +130,54 @@ export function CreateTicketDialog({ roomId }: { roomId?: string | null }) {
           ) : (
             <div className="space-y-2">
               <Label htmlFor="assignee">Assign To</Label>
-              <Select value={assignedToId} onValueChange={(val) => setAssignedToId(val || "")} disabled={!selectedRoomId}>
+              <Select
+                value={assignedToId}
+                onValueChange={(val) => setAssignedToId(val || "")}
+                onOpenChange={(open) => {
+                  if (!open) setAssigneeSearch("");
+                }}
+                disabled={!selectedRoomId}
+              >
                 <SelectTrigger>
                   <SelectValue placeholder={selectedRoomId ? "Select an assignee (Optional)" : "Select a room first"}>
                     {assignedToId === "none" ? "Unassigned" : (filteredUsers.find((u: any) => u.id === assignedToId)?.name || (selectedRoomId ? "Select an assignee (Optional)" : "Select a room first"))}
                   </SelectValue>
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="max-h-[300px]">
+                  <div className="p-1">
+                    <Input
+                      placeholder="Search assignee..."
+                      value={assigneeSearch}
+                      onChange={(e) => setAssigneeSearch(e.target.value)}
+                      onKeyDown={(e) => e.stopPropagation()}
+                      className="h-8 text-xs mb-1 bg-slate-50 focus:bg-white"
+                    />
+                  </div>
                   <SelectItem value="none">Unassigned</SelectItem>
-                  {filteredUsers.map((u: any) => (
-                    <SelectItem key={u.id} value={u.id}>{u.name}</SelectItem>
-                  ))}
+                  {(() => {
+                    const filtered = filteredUsers.filter((u: any) => {
+                      const query = assigneeSearch.toLowerCase().trim();
+                      if (!query) return true;
+                      const nameMatch = u.name?.toLowerCase().includes(query);
+                      const staffIdMatch = u.staff_id?.toLowerCase().includes(query);
+                      return nameMatch || staffIdMatch;
+                    });
+
+                    if (filtered.length === 0) {
+                      return (
+                        <div className="text-slate-400 text-center py-2 text-xs">
+                          No staff found
+                        </div>
+                      );
+                    }
+
+                    return filtered.map((u: any) => (
+                      <SelectItem key={u.id} value={u.id}>
+                        {u.staff_id ? `[${u.staff_id}] ` : ""}
+                        {u.name}
+                      </SelectItem>
+                    ));
+                  })()}
                 </SelectContent>
               </Select>
             </div>

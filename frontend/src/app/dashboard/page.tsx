@@ -73,6 +73,7 @@ function DashboardContent() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [dueDate, setDueDate] = useState("");
   const [mobileTab, setMobileTab] = useState<"activity" | "details">("activity");
+  const [assigneeSearch, setAssigneeSearch] = useState("");
 
   const queryClient = useQueryClient();
 
@@ -321,6 +322,9 @@ function DashboardContent() {
                 assigned_to_id: val === "unassigned" ? null : val,
               })
             }
+            onOpenChange={(open) => {
+              if (!open) setAssigneeSearch("");
+            }}
             disabled={updateTicketMutation.isPending || selectedTicket!.status === "resolved"}
           >
             <SelectTrigger className="h-8 w-full border-slate-200 text-xs bg-slate-50 hover:bg-slate-100">
@@ -335,7 +339,16 @@ function DashboardContent() {
                 </span>
               </div>
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent className="max-h-[300px]">
+              <div className="p-1">
+                <Input
+                  placeholder="Search assignee..."
+                  value={assigneeSearch}
+                  onChange={(e) => setAssigneeSearch(e.target.value)}
+                  onKeyDown={(e) => e.stopPropagation()}
+                  className="h-8 text-xs mb-1 bg-slate-50 focus:bg-white"
+                />
+              </div>
               <SelectItem value="unassigned" className="text-xs">Unassigned</SelectItem>
               {(() => {
                 const options = ticketRoomMembers ? [...ticketRoomMembers] : [];
@@ -344,7 +357,23 @@ function DashboardContent() {
                     options.push(selectedTicket.assignee);
                   }
                 }
-                return options.map((u: any) => (
+                const filtered = options.filter((u: any) => {
+                  const query = assigneeSearch.toLowerCase().trim();
+                  if (!query) return true;
+                  const nameMatch = u.name?.toLowerCase().includes(query);
+                  const staffIdMatch = u.staff_id?.toLowerCase().includes(query);
+                  return nameMatch || staffIdMatch;
+                });
+
+                if (filtered.length === 0) {
+                  return (
+                    <div className="text-slate-400 text-center py-2 text-xs">
+                      No staff found
+                    </div>
+                  );
+                }
+
+                return filtered.map((u: any) => (
                   <SelectItem key={u.id} value={u.id} className="text-xs">
                     {u.staff_id ? `[${u.staff_id}] ` : ""}
                     {u.name}
