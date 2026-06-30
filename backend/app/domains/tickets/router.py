@@ -63,39 +63,16 @@ def get_tickets(
         .filter(models.Room.type == models.RoomType.universal)
     )
 
-    if current_user.role in ["owner", "hr", "it_team", "executive"]:
-        # See all active tickets
+    if current_user.role == "owner":
+        # Owners see all active tickets
         pass
     else:
-        user_room_ids = [m.room_id for m in current_user.room_memberships]
-        user_room_tickets = (
-            db.query(models.TicketRoom.ticket_id)
-            .filter(models.TicketRoom.room_id.in_(user_room_ids))
+        # Non-owners see ONLY tickets they created, are assigned to, or in universal rooms
+        query = query.filter(
+            (models.Ticket.creator_id == current_user.id)
+            | (models.Ticket.assigned_to_id == current_user.id)
+            | models.Ticket.id.in_(universal_room_tickets)
         )
-        if room_id:
-            # When viewing a specific room, check room memberships
-            query = query.filter(
-                (models.Ticket.creator_id == current_user.id)
-                | (models.Ticket.assigned_to_id == current_user.id)
-                | models.Ticket.id.in_(universal_room_tickets)
-                | models.Ticket.id.in_(user_room_tickets)
-            )
-        else:
-            # "All Tickets" view (no room_id selected)
-            if current_user.role == "manager":
-                # Managers see all tickets in their rooms + created/assigned
-                query = query.filter(
-                    (models.Ticket.creator_id == current_user.id)
-                    | (models.Ticket.assigned_to_id == current_user.id)
-                    | models.Ticket.id.in_(universal_room_tickets)
-                    | models.Ticket.id.in_(user_room_tickets)
-                )
-            else:
-                # Standard staff see only tickets assigned to them (+ universal announcements)
-                query = query.filter(
-                    (models.Ticket.assigned_to_id == current_user.id)
-                    | models.Ticket.id.in_(universal_room_tickets)
-                )
 
     if room_id:
         query = query.join(models.TicketRoom).filter(models.TicketRoom.room_id == room_id)
@@ -220,14 +197,11 @@ def get_ticket(
         raise HTTPException(status_code=404, detail="Ticket not found")
 
     # Security Check
-    if current_user.role not in ["owner", "hr", "it_team", "executive"]:
+    if current_user.role != "owner":
         is_creator_or_assignee = (ticket.creator_id == current_user.id or ticket.assigned_to_id == current_user.id)
-        ticket_room_ids = {link.room_id for link in ticket.room_links}
-        user_room_ids = {m.room_id for m in current_user.room_memberships}
-        has_room_access = bool(ticket_room_ids & user_room_ids)
         is_universal = any(link.room.type == models.RoomType.universal for link in ticket.room_links)
 
-        if not is_creator_or_assignee and not has_room_access and not is_universal:
+        if not is_creator_or_assignee and not is_universal:
             raise HTTPException(status_code=403, detail="Not authorized to view this ticket")
 
     ticket.rooms = [link.room for link in ticket.room_links]
@@ -252,14 +226,11 @@ async def post_message(
         raise HTTPException(status_code=404, detail="Ticket not found")
 
     # Security check
-    if current_user.role not in ["owner", "hr", "it_team", "executive"]:
+    if current_user.role != "owner":
         is_creator_or_assignee = (ticket.creator_id == current_user.id or ticket.assigned_to_id == current_user.id)
-        ticket_room_ids = {link.room_id for link in ticket.room_links}
-        user_room_ids = {m.room_id for m in current_user.room_memberships}
-        has_room_access = bool(ticket_room_ids & user_room_ids)
         is_universal = any(link.room.type == models.RoomType.universal for link in ticket.room_links)
 
-        if not is_creator_or_assignee and not has_room_access and not is_universal:
+        if not is_creator_or_assignee and not is_universal:
             raise HTTPException(
                 status_code=403, detail="Not authorized to comment on this ticket"
             )
@@ -323,19 +294,14 @@ def get_message_attachment(
 
     # Check access to ticket
     ticket = db.query(models.Ticket).filter(models.Ticket.id == message.ticket_id).first()
-    if current_user.role not in ["owner", "hr", "it_team", "executive"]:
+    if current_user.role != "owner":
         # Check if user is creator or assignee
         is_creator_or_assignee = (ticket.creator_id == current_user.id or ticket.assigned_to_id == current_user.id)
-
-        # Check if user belongs to any of the rooms the ticket is linked to
-        ticket_room_ids = {link.room_id for link in ticket.room_links}
-        user_room_ids = {m.room_id for m in current_user.room_memberships}
-        has_room_access = bool(ticket_room_ids & user_room_ids)
 
         # Check if it's in a universal room
         is_universal = any(link.room.type == models.RoomType.universal for link in ticket.room_links)
 
-        if not is_creator_or_assignee and not has_room_access and not is_universal:
+        if not is_creator_or_assignee and not is_universal:
             raise HTTPException(status_code=403, detail="Not authorized to access this attachment")
 
     return Response(
