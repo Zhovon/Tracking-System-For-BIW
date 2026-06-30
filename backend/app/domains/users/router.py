@@ -46,6 +46,7 @@ def get_current_user_profile(current_user: models.Employee = Depends(get_current
 
 @router.get("", response_model=List[schemas.UserOut])
 def get_users(
+    room_id: uuid.UUID = None,
     db: Session = Depends(get_db),
     current_user: models.Employee = Depends(get_current_user),
 ) -> Any:
@@ -53,7 +54,33 @@ def get_users(
     Get all employees. Scoped by role:
     - Owners, HR, IT Support, Executives see all.
     - Managers see only employees sharing branch rooms they manage.
+    - If room_id is provided, returns all active employees who are members of that room.
     """
+    if room_id:
+        room = db.query(models.Room).filter(models.Room.id == room_id, models.Room.is_active == True).first()
+        if not room:
+            raise HTTPException(status_code=404, detail="Room not found")
+
+        # Security check: verify if the caller is an owner/admin, or if it is a universal room,
+        # or if the caller is explicitly a member of the room.
+        if current_user.role not in ["owner", "hr", "it_team", "executive"]:
+            user_room_ids = [m.room_id for m in current_user.room_memberships]
+            if room.type != models.RoomType.universal and room_id not in user_room_ids:
+                raise HTTPException(status_code=403, detail="Not authorized to view members of this room")
+
+        if room.type == models.RoomType.universal:
+            return db.query(models.Employee).filter(models.Employee.is_active == True).all()
+        else:
+            return (
+                db.query(models.Employee)
+                .join(models.RoomMember, models.Employee.id == models.RoomMember.employee_id)
+                .filter(
+                    models.Employee.is_active == True,
+                    models.RoomMember.room_id == room_id
+                )
+                .all()
+            )
+
     if current_user.role in ["owner", "hr", "it_team", "executive"]:
         return db.query(models.Employee).filter(models.Employee.is_active == True).all()
     elif current_user.role == "manager":

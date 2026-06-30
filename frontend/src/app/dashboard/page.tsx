@@ -4,6 +4,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   fetchTickets, fetchTicketDetails, postMessage, updateTicket,
   fetchAllUsers, fetchAllRooms, approveTicket, fetchCurrentUser,
+  fetchRoomMembers,
 } from "@/lib/api";
 import { useSearchParams, useRouter } from "next/navigation";
 import { Suspense, useState, useEffect } from "react";
@@ -217,6 +218,17 @@ function DashboardContent() {
     new Date(selectedTicket.due_date) < new Date() &&
     selectedTicket.status !== "resolved";
 
+  const isSelectedTicketUniversal = selectedTicket?.rooms?.some(
+    (r: any) => r.type === "universal" || r.name?.toLowerCase() === "universal"
+  );
+
+  const primaryTicketRoomId = selectedTicket?.rooms?.[0]?.id;
+  const { data: ticketRoomMembers } = useQuery({
+    queryKey: ["ticketRoomMembers", primaryTicketRoomId],
+    queryFn: () => primaryTicketRoomId ? fetchRoomMembers(primaryTicketRoomId) : Promise.resolve([]),
+    enabled: !!primaryTicketRoomId && !isSelectedTicketUniversal,
+  });
+
   const handleDueDateBlur = () => {
     if (!selectedTicket) return;
     const currentVal = selectedTicket.due_date
@@ -299,46 +311,50 @@ function DashboardContent() {
       </div>
 
       {/* Assignee */}
-      <div>
-        <PropLabel>Assignee</PropLabel>
-        <Select
-          value={assigneeId || "unassigned"}
-          onValueChange={(val) =>
-            updateTicketMutation.mutate({
-              assigned_to_id: val === "unassigned" ? null : val,
-            })
-          }
-          disabled={updateTicketMutation.isPending || selectedTicket!.status === "resolved"}
-        >
-          <SelectTrigger className="h-8 w-full border-slate-200 text-xs bg-slate-50 hover:bg-slate-100">
-            <div className="flex items-center gap-1.5 truncate">
-              <div className="w-5 h-5 rounded-full bg-indigo-100 text-indigo-700 text-[10px] font-bold flex items-center justify-center shrink-0">
-                {resolvedAssigneeName
-                  ? resolvedAssigneeName.replace(/\[.*?\]\s*/, "").charAt(0)
-                  : "?"}
+      {!isSelectedTicketUniversal && (
+        <div>
+          <PropLabel>Assignee</PropLabel>
+          <Select
+            value={assigneeId || "unassigned"}
+            onValueChange={(val) =>
+              updateTicketMutation.mutate({
+                assigned_to_id: val === "unassigned" ? null : val,
+              })
+            }
+            disabled={updateTicketMutation.isPending || selectedTicket!.status === "resolved"}
+          >
+            <SelectTrigger className="h-8 w-full border-slate-200 text-xs bg-slate-50 hover:bg-slate-100">
+              <div className="flex items-center gap-1.5 truncate">
+                <div className="w-5 h-5 rounded-full bg-indigo-100 text-indigo-700 text-[10px] font-bold flex items-center justify-center shrink-0">
+                  {resolvedAssigneeName
+                    ? resolvedAssigneeName.replace(/\[.*?\]\s*/, "").charAt(0)
+                    : "?"}
+                </div>
+                <span className="truncate text-xs">
+                  {resolvedAssigneeName || "Unassigned"}
+                </span>
               </div>
-              <span className="truncate text-xs">
-                {resolvedAssigneeName || "Unassigned"}
-              </span>
-            </div>
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="unassigned" className="text-xs">Unassigned</SelectItem>
-            {allUsers
-              ?.filter(
-                (u: any) =>
-                  selectedTicket!.rooms?.some((r: any) => u.room_ids?.includes(r.id)) ||
-                  u.id === assigneeId
-              )
-              .map((u: any) => (
-                <SelectItem key={u.id} value={u.id} className="text-xs">
-                  {u.staff_id ? `[${u.staff_id}] ` : ""}
-                  {u.name}
-                </SelectItem>
-              ))}
-          </SelectContent>
-        </Select>
-      </div>
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="unassigned" className="text-xs">Unassigned</SelectItem>
+              {(() => {
+                const options = ticketRoomMembers ? [...ticketRoomMembers] : [];
+                if (selectedTicket?.assignee && typeof selectedTicket.assignee === "object") {
+                  if (!options.some((u: any) => u.id === selectedTicket.assignee.id)) {
+                    options.push(selectedTicket.assignee);
+                  }
+                }
+                return options.map((u: any) => (
+                  <SelectItem key={u.id} value={u.id} className="text-xs">
+                    {u.staff_id ? `[${u.staff_id}] ` : ""}
+                    {u.name}
+                  </SelectItem>
+                ));
+              })()}
+            </SelectContent>
+          </Select>
+        </div>
+      )}
 
       {/* Due Date */}
       <div>
@@ -380,30 +396,32 @@ function DashboardContent() {
       </div>
 
       {/* Escalate */}
-      <div>
-        <PropLabel>Escalate To</PropLabel>
-        <Select
-          value="placeholder"
-          onValueChange={(val) => updateTicketMutation.mutate({ add_room_id: val })}
-          disabled={updateTicketMutation.isPending || selectedTicket!.status === "resolved"}
-        >
-          <SelectTrigger className="h-8 w-full border-slate-200 text-xs bg-slate-50 hover:bg-slate-100">
-            <SelectValue placeholder="Add department…" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="placeholder" disabled className="text-xs">
-              Select department…
-            </SelectItem>
-            {allRooms
-              ?.filter((r: any) => !selectedTicket!.rooms?.some((tr: any) => tr.id === r.id))
-              .map((r: any) => (
-                <SelectItem key={r.id} value={r.id} className="text-xs">
-                  {r.name}
-                </SelectItem>
-              ))}
-          </SelectContent>
-        </Select>
-      </div>
+      {!isSelectedTicketUniversal && (
+        <div>
+          <PropLabel>Escalate To</PropLabel>
+          <Select
+            value="placeholder"
+            onValueChange={(val) => updateTicketMutation.mutate({ add_room_id: val })}
+            disabled={updateTicketMutation.isPending || selectedTicket!.status === "resolved"}
+          >
+            <SelectTrigger className="h-8 w-full border-slate-200 text-xs bg-slate-50 hover:bg-slate-100">
+              <SelectValue placeholder="Add department…" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="placeholder" disabled className="text-xs">
+                Select department…
+              </SelectItem>
+              {allRooms
+                ?.filter((r: any) => !selectedTicket!.rooms?.some((tr: any) => tr.id === r.id))
+                .map((r: any) => (
+                  <SelectItem key={r.id} value={r.id} className="text-xs">
+                    {r.name}
+                  </SelectItem>
+                ))}
+            </SelectContent>
+          </Select>
+        </div>
+      )}
 
       <Separator className="bg-slate-100" />
 
@@ -670,28 +688,30 @@ function DashboardContent() {
                           <span className="hidden sm:inline">Approve</span>
                         </Button>
                       )}
-                    {selectedTicket.status !== "resolved" ? (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="text-emerald-600 border-emerald-200 hover:bg-emerald-50 h-8 text-xs px-3"
-                        onClick={() => updateTicketMutation.mutate({ status: "resolved" })}
-                        disabled={updateTicketMutation.isPending}
-                      >
-                        <CheckCircle2 className="w-3.5 h-3.5 mr-1 md:mr-1.5" />
-                        <span className="hidden sm:inline">Resolve</span>
-                      </Button>
-                    ) : (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="text-amber-600 border-amber-200 hover:bg-amber-50 h-8 text-xs px-3"
-                        onClick={() => updateTicketMutation.mutate({ status: "open" })}
-                        disabled={updateTicketMutation.isPending}
-                      >
-                        <RotateCcw className="w-3.5 h-3.5 mr-1 md:mr-1.5" />
-                        <span className="hidden sm:inline">Re-open</span>
-                      </Button>
+                    {!isSelectedTicketUniversal && (
+                      selectedTicket.status !== "resolved" ? (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="text-emerald-600 border-emerald-200 hover:bg-emerald-50 h-8 text-xs px-3"
+                          onClick={() => updateTicketMutation.mutate({ status: "resolved" })}
+                          disabled={updateTicketMutation.isPending}
+                        >
+                          <CheckCircle2 className="w-3.5 h-3.5 mr-1 md:mr-1.5" />
+                          <span className="hidden sm:inline">Resolve</span>
+                        </Button>
+                      ) : (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="text-amber-600 border-amber-200 hover:bg-amber-50 h-8 text-xs px-3"
+                          onClick={() => updateTicketMutation.mutate({ status: "open" })}
+                          disabled={updateTicketMutation.isPending}
+                        >
+                          <RotateCcw className="w-3.5 h-3.5 mr-1 md:mr-1.5" />
+                          <span className="hidden sm:inline">Re-open</span>
+                        </Button>
+                      )
                     )}
                   </div>
                 </div>
@@ -877,10 +897,10 @@ function DashboardContent() {
                           {postMessageMutation.isPending ? (
                             <>
                               <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
-                              Posting…
+                              Responding…
                             </>
                           ) : (
-                            "Post Comment"
+                            "Respond"
                           )}
                         </Button>
                       </div>

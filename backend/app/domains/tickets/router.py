@@ -63,15 +63,22 @@ def get_tickets(
         .filter(models.Room.type == models.RoomType.universal)
     )
 
-    if current_user.role == "owner":
-        # Owners see everything
+    if current_user.role in ["owner", "hr", "it_team", "executive"]:
+        # See all active tickets
         pass
     else:
-        # Everyone else sees what they created, what is assigned to them, plus Universal notices
+        # Managers and Staff see what they created, what is assigned to them,
+        # plus tickets in any room they have access to (including universal rooms)
+        user_room_ids = [m.room_id for m in current_user.room_memberships]
+        user_room_tickets = (
+            db.query(models.TicketRoom.ticket_id)
+            .filter(models.TicketRoom.room_id.in_(user_room_ids))
+        )
         query = query.filter(
             (models.Ticket.creator_id == current_user.id)
             | (models.Ticket.assigned_to_id == current_user.id)
             | models.Ticket.id.in_(universal_room_tickets)
+            | models.Ticket.id.in_(user_room_tickets)
         )
 
     if room_id:
@@ -193,12 +200,15 @@ def get_ticket(
         raise HTTPException(status_code=404, detail="Ticket not found")
 
     # Security Check
-    if current_user.role != "owner":
+    if current_user.role not in ["owner", "hr", "it_team", "executive"]:
+        is_creator_or_assignee = (ticket.creator_id == current_user.id or ticket.assigned_to_id == current_user.id)
+        ticket_room_ids = {link.room_id for link in ticket.room_links}
+        user_room_ids = {m.room_id for m in current_user.room_memberships}
+        has_room_access = bool(ticket_room_ids & user_room_ids)
         is_universal = any(link.room.type == models.RoomType.universal for link in ticket.room_links)
 
-        if not is_universal:
-            if ticket.creator_id != current_user.id and ticket.assigned_to_id != current_user.id:
-                raise HTTPException(status_code=403, detail="Not authorized to view this ticket")
+        if not is_creator_or_assignee and not has_room_access and not is_universal:
+            raise HTTPException(status_code=403, detail="Not authorized to view this ticket")
 
     ticket.rooms = [link.room for link in ticket.room_links]
     return ticket
@@ -222,14 +232,17 @@ async def post_message(
         raise HTTPException(status_code=404, detail="Ticket not found")
 
     # Security check
-    if current_user.role != "owner":
+    if current_user.role not in ["owner", "hr", "it_team", "executive"]:
+        is_creator_or_assignee = (ticket.creator_id == current_user.id or ticket.assigned_to_id == current_user.id)
+        ticket_room_ids = {link.room_id for link in ticket.room_links}
+        user_room_ids = {m.room_id for m in current_user.room_memberships}
+        has_room_access = bool(ticket_room_ids & user_room_ids)
         is_universal = any(link.room.type == models.RoomType.universal for link in ticket.room_links)
 
-        if not is_universal:
-            if ticket.creator_id != current_user.id and ticket.assigned_to_id != current_user.id:
-                raise HTTPException(
-                    status_code=403, detail="Not authorized to comment on this ticket"
-                )
+        if not is_creator_or_assignee and not has_room_access and not is_universal:
+            raise HTTPException(
+                status_code=403, detail="Not authorized to comment on this ticket"
+            )
 
     attachment_data = None
     attachment_name = None
@@ -284,7 +297,7 @@ def get_message_attachment(
 
     # Check access to ticket
     ticket = db.query(models.Ticket).filter(models.Ticket.id == message.ticket_id).first()
-    if current_user.role != "owner":
+    if current_user.role not in ["owner", "hr", "it_team", "executive"]:
         # Check if user is creator or assignee
         is_creator_or_assignee = (ticket.creator_id == current_user.id or ticket.assigned_to_id == current_user.id)
 
@@ -322,8 +335,14 @@ def update_ticket(
         raise HTTPException(status_code=404, detail="Ticket not found")
 
     # Security check
-    if current_user.role != "owner":
-        if ticket.creator_id != current_user.id and ticket.assigned_to_id != current_user.id:
+    if current_user.role not in ["owner", "hr", "it_team", "executive"]:
+        is_creator_or_assignee = (ticket.creator_id == current_user.id or ticket.assigned_to_id == current_user.id)
+        ticket_room_ids = {link.room_id for link in ticket.room_links}
+        user_room_ids = {m.room_id for m in current_user.room_memberships}
+        has_room_access = bool(ticket_room_ids & user_room_ids)
+        is_universal = any(link.room.type == models.RoomType.universal for link in ticket.room_links)
+
+        if not is_creator_or_assignee and not has_room_access and not is_universal:
             raise HTTPException(status_code=403, detail="Not authorized to modify this ticket")
 
     # Update logic and system message generation

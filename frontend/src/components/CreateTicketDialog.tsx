@@ -9,7 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
-import { createTicket, fetchAllRooms, fetchAllUsers } from "@/lib/api";
+import { createTicket, fetchAllRooms, fetchAllUsers, fetchRoomMembers } from "@/lib/api";
 
 export function CreateTicketDialog({ roomId }: { roomId?: string | null }) {
   const [open, setOpen] = useState(false);
@@ -22,12 +22,17 @@ export function CreateTicketDialog({ roomId }: { roomId?: string | null }) {
   const queryClient = useQueryClient();
 
   const { data: rooms } = useQuery({ queryKey: ["allRooms"], queryFn: fetchAllRooms });
-  const { data: users } = useQuery({ queryKey: ["allUsers"], queryFn: fetchAllUsers });
 
   const selectedRoom = rooms?.find((r: any) => r.id === selectedRoomId);
   const isUniversalRoom = selectedRoom?.type === "universal" || selectedRoom?.name?.toLowerCase() === "universal";
 
-  const filteredUsers = users?.filter((u: any) => selectedRoomId && u.room_ids?.includes(selectedRoomId)) || [];
+  const { data: roomMembers } = useQuery({
+    queryKey: ["roomMembers", selectedRoomId],
+    queryFn: () => fetchRoomMembers(selectedRoomId),
+    enabled: !!selectedRoomId && !isUniversalRoom,
+  });
+
+  const filteredUsers = roomMembers || [];
 
   const createTicketMutation = useMutation({
     mutationFn: async (newTicket: any) => {

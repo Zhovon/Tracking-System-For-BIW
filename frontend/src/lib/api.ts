@@ -103,6 +103,10 @@ export async function fetchAllUsers() {
   return fetchApi(`/users`);
 }
 
+export async function fetchRoomMembers(roomId: string) {
+  return fetchApi(`/users?room_id=${roomId}`);
+}
+
 export async function fetchCurrentUser() {
   return fetchApi(`/users/me`);
 }
