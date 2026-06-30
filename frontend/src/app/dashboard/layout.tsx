@@ -210,9 +210,14 @@ export default function DashboardLayout({
 
         <div className="flex-1 overflow-y-auto py-4">
           <nav className="space-y-1 px-3">
-            <h2 className="px-3 text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-2 mt-2">
-              Your Rooms
-            </h2>
+            <Link
+              href="/dashboard"
+              className="flex items-center gap-3 px-3 py-2 text-sm font-semibold rounded-md hover:bg-slate-100 transition-colors mb-2 text-indigo-600 bg-indigo-50/50 hover:bg-indigo-50"
+            >
+              <LayoutDashboard className="w-4 h-4 text-indigo-500" />
+              All Tickets
+            </Link>
+            
             
             {isLoading && (
               <div className="space-y-2 px-3 py-1">
@@ -335,6 +340,14 @@ export default function DashboardLayout({
             <button onClick={() => setMobileRoomsOpen(false)}><X className="w-4 h-4 text-slate-400" /></button>
           </div>
           <div className="overflow-y-auto p-2">
+            <Link
+              href="/dashboard"
+              onClick={() => setMobileRoomsOpen(false)}
+              className="flex items-center gap-3 p-3 rounded-xl hover:bg-slate-50 transition-colors active:bg-slate-100 mb-1 text-indigo-600 bg-indigo-50/50"
+            >
+              <div className="p-2 bg-indigo-50 rounded-lg"><LayoutDashboard className="w-4 h-4 text-indigo-500" /></div>
+              All Tickets
+            </Link>
             {rooms?.map((room: any) => (
               <Link
                 key={room.id}

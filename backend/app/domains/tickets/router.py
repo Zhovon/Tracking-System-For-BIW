@@ -67,19 +67,35 @@ def get_tickets(
         # See all active tickets
         pass
     else:
-        # Managers and Staff see what they created, what is assigned to them,
-        # plus tickets in any room they have access to (including universal rooms)
         user_room_ids = [m.room_id for m in current_user.room_memberships]
         user_room_tickets = (
             db.query(models.TicketRoom.ticket_id)
             .filter(models.TicketRoom.room_id.in_(user_room_ids))
         )
-        query = query.filter(
-            (models.Ticket.creator_id == current_user.id)
-            | (models.Ticket.assigned_to_id == current_user.id)
-            | models.Ticket.id.in_(universal_room_tickets)
-            | models.Ticket.id.in_(user_room_tickets)
-        )
+        if room_id:
+            # When viewing a specific room, check room memberships
+            query = query.filter(
+                (models.Ticket.creator_id == current_user.id)
+                | (models.Ticket.assigned_to_id == current_user.id)
+                | models.Ticket.id.in_(universal_room_tickets)
+                | models.Ticket.id.in_(user_room_tickets)
+            )
+        else:
+            # "All Tickets" view (no room_id selected)
+            if current_user.role == "manager":
+                # Managers see all tickets in their rooms + created/assigned
+                query = query.filter(
+                    (models.Ticket.creator_id == current_user.id)
+                    | (models.Ticket.assigned_to_id == current_user.id)
+                    | models.Ticket.id.in_(universal_room_tickets)
+                    | models.Ticket.id.in_(user_room_tickets)
+                )
+            else:
+                # Standard staff see only tickets assigned to them (+ universal announcements)
+                query = query.filter(
+                    (models.Ticket.assigned_to_id == current_user.id)
+                    | models.Ticket.id.in_(universal_room_tickets)
+                )
 
     if room_id:
         query = query.join(models.TicketRoom).filter(models.TicketRoom.room_id == room_id)
