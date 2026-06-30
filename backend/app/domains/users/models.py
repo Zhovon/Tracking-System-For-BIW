@@ -34,6 +34,7 @@ class Employee(Base):
     )
     messages = relationship("Message", back_populates="author")
     notifications = relationship("Notification", back_populates="user")
+    participated_tickets = relationship("TicketParticipant", back_populates="employee")
 
     @property
     def room_ids(self):

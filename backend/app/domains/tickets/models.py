@@ -64,6 +64,7 @@ class Ticket(Base):
         "Employee", foreign_keys=[approved_by_id], back_populates="approved_tickets"
     )
     room_links = relationship("TicketRoom", back_populates="ticket")
+    participants = relationship("TicketParticipant", back_populates="ticket")
     messages = relationship("Message", back_populates="ticket", order_by="Message.created_at")
 
 
@@ -71,11 +72,22 @@ class TicketRoom(Base):
     __tablename__ = "ticket_rooms"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, index=True)
-    ticket_id = Column(UUID(as_uuid=True), ForeignKey("tickets.id"), index=True)
-    room_id = Column(UUID(as_uuid=True), ForeignKey("rooms.id"), index=True)
+    ticket_id = Column(UUID(as_uuid=True), ForeignKey("tickets.id", ondelete="CASCADE"), index=True)
+    room_id = Column(UUID(as_uuid=True), ForeignKey("rooms.id", ondelete="CASCADE"), index=True)
 
     ticket = relationship("Ticket", back_populates="room_links")
     room = relationship("Room", back_populates="ticket_links")
+
+
+class TicketParticipant(Base):
+    __tablename__ = "ticket_participants"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, index=True)
+    ticket_id = Column(UUID(as_uuid=True), ForeignKey("tickets.id", ondelete="CASCADE"), index=True)
+    employee_id = Column(UUID(as_uuid=True), ForeignKey("employees.id", ondelete="CASCADE"), index=True)
+
+    ticket = relationship("Ticket", back_populates="participants")
+    employee = relationship("Employee", back_populates="participated_tickets")
 
 
 class Message(Base):
