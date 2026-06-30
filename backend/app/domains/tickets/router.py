@@ -291,6 +291,12 @@ async def post_message(
     if ticket.assigned_to_id and ticket.assigned_to_id != current_user.id:
         users_to_notify.add(ticket.assigned_to_id)
 
+    # Notify all Owners as well
+    owners = db.query(models.Employee).filter(models.Employee.role == "owner").all()
+    for owner in owners:
+        if owner.id != current_user.id:
+            users_to_notify.add(owner.id)
+
     for user_id in users_to_notify:
         notification = models.Notification(
             user_id=user_id, message=f"New response by {current_user.name} on ticket: {ticket.title}"
