@@ -84,9 +84,11 @@ export default function DashboardLayout({
   
   // Audio for notifications
   const [audio] = useState(() => typeof Audio !== "undefined" ? new Audio("/ding.mp3") : null);
+  const [toastNotification, setToastNotification] = useState<{ id: string; title: string; message: string; ticketId?: string } | null>(null);
 
+  // Request browser notification permission
   useEffect(() => {
-    if ("Notification" in window && Notification.permission === "default") {
+    if (typeof window !== 'undefined' && "Notification" in window && Notification.permission !== "granted" && Notification.permission !== "denied") {
       Notification.requestPermission();
     }
   }, []);
@@ -105,16 +107,32 @@ export default function DashboardLayout({
           // Play sound
           if (audio) {
             audio.currentTime = 0;
-            audio.play().catch(e => console.log("Audio play blocked", e));
+            const playPromise = audio.play();
+            if (playPromise !== undefined) {
+              playPromise.catch(e => console.log("Audio play blocked", e));
+            }
           }
 
           // Show native notification
-          if ("Notification" in window && Notification.permission === "granted") {
-            new Notification("New Notification", {
-              body: payload.new.message,
-              icon: "/logo.jpeg"
-            });
+          if (typeof window !== 'undefined' && "Notification" in window && Notification.permission === "granted") {
+            try {
+              new Notification("New Notification", {
+                body: payload.new.message,
+                icon: "/logo.jpeg"
+              });
+            } catch (e) {
+               // iOS might throw error if not in Service Worker
+            }
           }
+
+          // Always show in-app toast (crucial for iOS/Android Safari which blocks native popups and sound)
+          setToastNotification({
+            id: payload.new.id,
+            title: "New Notification",
+            message: payload.new.message,
+            ticketId: payload.new.ticket_id
+          });
+          setTimeout(() => setToastNotification(null), 5000);
         }
       )
       .on(
@@ -129,11 +147,19 @@ export default function DashboardLayout({
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [currentUser, queryClient]);
+  }, [currentUser, queryClient, audio]);
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
     router.push("/login");
+  };
+
+  const handleNotificationClick = (notif: any) => {
+    markReadMutation.mutate(notif.id);
+    setShowNotifications(false);
+    if (notif.ticket_id) {
+      router.push(`/dashboard?ticket_id=${notif.ticket_id}`);
+    }
   };
 
   if (loadingUser) {
@@ -164,14 +190,18 @@ export default function DashboardLayout({
             ) : (
               <div className="divide-y divide-slate-100">
                 {notifications?.map((notif: any) => (
-                  <div key={notif.id} className={`p-3 text-sm flex gap-3 ${notif.is_read ? 'opacity-60' : 'bg-indigo-50/50'}`}>
+                  <div 
+                    key={notif.id} 
+                    onClick={() => handleNotificationClick(notif)}
+                    className={`p-3 text-sm flex gap-3 cursor-pointer hover:bg-slate-50 transition-colors ${notif.is_read ? 'opacity-60' : 'bg-indigo-50/50 hover:bg-indigo-50'}`}
+                  >
                     <div className="flex-1">
                       <p className="text-slate-800">{notif.message}</p>
                       <p className="text-xs text-slate-400 mt-1">{new Date(notif.created_at.endsWith("Z") || notif.created_at.includes("+") ? notif.created_at : notif.created_at + "Z").toLocaleString()}</p>
                     </div>
                     {!notif.is_read && (
                       <button 
-                        onClick={() => markReadMutation.mutate(notif.id)}
+                        onClick={(e) => { e.stopPropagation(); markReadMutation.mutate(notif.id); }}
                         className="text-emerald-500 hover:text-emerald-600 transition-colors self-start mt-1"
                         title="Mark as read"
                       >
@@ -197,6 +227,26 @@ export default function DashboardLayout({
 
   return (
     <div className="flex h-[100dvh] overflow-hidden bg-slate-50 text-slate-900 relative">
+      
+      {/* Custom In-App Toast for Mobile / Blocked Audio */}
+      {toastNotification && (
+        <div 
+          onClick={() => {
+            if (toastNotification.ticketId) router.push(`/dashboard?ticket_id=${toastNotification.ticketId}`);
+            setToastNotification(null);
+          }}
+          className="fixed top-4 left-1/2 -translate-x-1/2 z-[100] w-11/12 max-w-sm bg-indigo-600 text-white p-4 rounded-xl shadow-2xl shadow-indigo-600/30 flex items-start gap-3 cursor-pointer animate-in slide-in-from-top-4 fade-in duration-300"
+        >
+          <Bell className="w-5 h-5 shrink-0 mt-0.5 opacity-90" />
+          <div className="flex-1 min-w-0">
+            <h4 className="font-semibold text-sm mb-0.5">{toastNotification.title}</h4>
+            <p className="text-sm opacity-90 leading-tight">{toastNotification.message}</p>
+          </div>
+          <button onClick={(e) => { e.stopPropagation(); setToastNotification(null); }} className="p-1 hover:bg-white/20 rounded-md transition-colors shrink-0">
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
       
       {/* Desktop Sidebar (Hidden on Mobile) */}
       <aside className="hidden md:flex inset-y-0 left-0 z-50 w-64 bg-white border-r border-slate-200 flex-col flex-shrink-0">
