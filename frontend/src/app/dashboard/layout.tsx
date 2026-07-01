@@ -86,12 +86,54 @@ export default function DashboardLayout({
   const [audio] = useState(() => typeof Audio !== "undefined" ? new Audio("/ding.mp3") : null);
   const [toastNotification, setToastNotification] = useState<{ id: string; title: string; message: string; ticketId?: string } | null>(null);
 
-  // Request browser notification permission
+  // Request browser notification permission & setup Web Push
   useEffect(() => {
-    if (typeof window !== 'undefined' && "Notification" in window && Notification.permission !== "granted" && Notification.permission !== "denied") {
-      Notification.requestPermission();
+    async function setupPush() {
+      if (typeof window !== 'undefined' && 'serviceWorker' in navigator && 'PushManager' in window) {
+        try {
+          const reg = await navigator.serviceWorker.register('/sw.js');
+          let sub = await reg.pushManager.getSubscription();
+          
+          if (!sub) {
+            // Ask for permission and subscribe
+            const permission = await Notification.requestPermission();
+            if (permission === 'granted') {
+              const VAPID_PUBLIC_KEY = "BLceEsZwd9FEUWTp0XF6lph5FKxTf49np0ecfubdLh9oF9jOK0jQS6rhqPtXzjcrRzVzjvsu7U0AIWawR_mJWvg";
+              sub = await reg.pushManager.subscribe({
+                userVisibleOnly: true,
+                applicationServerKey: VAPID_PUBLIC_KEY
+              });
+            }
+          }
+
+          if (sub) {
+            // Send to our backend
+            const subJSON = sub.toJSON();
+            if (subJSON.endpoint && subJSON.keys) {
+              const token = (await supabase.auth.getSession()).data.session?.access_token;
+              if (token) {
+                await fetch('/api/v1/notifications/push/subscribe', {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                  },
+                  body: JSON.stringify({
+                    endpoint: subJSON.endpoint,
+                    p256dh: subJSON.keys.p256dh,
+                    auth: subJSON.keys.auth
+                  })
+                });
+              }
+            }
+          }
+        } catch (e) {
+          console.error('Push setup failed:', e);
+        }
+      }
     }
-  }, []);
+    setupPush();
+  }, [currentUser]);
 
   // Supabase Realtime for Notifications
   useEffect(() => {

@@ -55,3 +55,34 @@ def mark_notification_read(
     db.commit()
     db.refresh(notification)
     return notification
+
+@router.post("/push/subscribe")
+def subscribe_to_push(
+    subscription: schemas.PushSubscriptionIn,
+    db: Session = Depends(get_db),
+    current_user: models.Employee = Depends(get_current_user),
+) -> Any:
+    """
+    Subscribe the current user to Web Push notifications.
+    """
+    # Check if subscription already exists
+    existing = db.query(models.PushSubscription).filter(
+        models.PushSubscription.endpoint == subscription.endpoint
+    ).first()
+
+    if existing:
+        if existing.user_id != current_user.id:
+            # Reassign if another user logs in on same browser
+            existing.user_id = current_user.id
+            db.commit()
+        return {"status": "ok"}
+
+    new_sub = models.PushSubscription(
+        user_id=current_user.id,
+        endpoint=subscription.endpoint,
+        p256dh=subscription.p256dh,
+        auth=subscription.auth
+    )
+    db.add(new_sub)
+    db.commit()
+    return {"status": "ok"}

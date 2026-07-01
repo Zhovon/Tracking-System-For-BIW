@@ -17,3 +17,4 @@ slowapi==0.1.9
 structlog>=24.0.0
 ruff>=0.4.0
 mypy>=1.10.0
+pywebpush==1.14.0

@@ -1,13 +1,45 @@
 from typing import Any, List
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, File, Form, HTTPException, Response, UploadFile
+from fastapi import (
+    APIRouter,
+    BackgroundTasks,
+    Depends,
+    File,
+    Form,
+    HTTPException,
+    Response,
+    UploadFile,
+)
 from sqlalchemy.orm import Session
 
 from app import models, schemas
 from app.api.deps import get_current_user, get_db
+from app.database import SessionLocal
+from app.domains.notifications.push import send_web_push
 
 router = APIRouter()
+
+
+def dispatch_notification(db: Session, background_tasks: BackgroundTasks, user_id: UUID, ticket_id: UUID, message: str):
+    notif = models.Notification(user_id=user_id, ticket_id=ticket_id, message=message)
+    db.add(notif)
+
+    def _send():
+        bg_db = SessionLocal()
+        try:
+            subs = bg_db.query(models.PushSubscription).filter(models.PushSubscription.user_id == user_id).all()
+            for sub in subs:
+                send_web_push(
+                    {"endpoint": sub.endpoint, "keys": {"p256dh": sub.p256dh, "auth": sub.auth}},
+                    {"title": "New Update", "body": message, "url": f"/dashboard?ticket_id={ticket_id}"}
+                )
+        finally:
+            bg_db.close()
+
+    if background_tasks:
+        background_tasks.add_task(_send)
+
 
 
 @router.get("/rooms", response_model=List[schemas.RoomOut])
@@ -107,7 +139,7 @@ def create_ticket(
     db: Session = Depends(get_db),
     ticket_in: schemas.TicketCreate,
     current_user: models.Employee = Depends(get_current_user),
-) -> Any:
+    background_tasks: BackgroundTasks) -> Any:
     """
     Create new ticket. Only Managers, HR, IT, and Owners can create.
     """
@@ -164,19 +196,11 @@ def create_ticket(
             else:
                 msg = f"New ticket created: {ticket.title}"
 
-            db.add(models.Notification(
-                user_id=owner.id,
-                ticket_id=ticket.id,
-                message=msg
-            ))
+            dispatch_notification(db, background_tasks, owner.id, ticket.id, msg)
 
     # Notify Assignee
     if ticket.assigned_to_id and ticket.assigned_to_id != current_user.id:
-        db.add(models.Notification(
-            user_id=ticket.assigned_to_id,
-            ticket_id=ticket.id,
-            message=f"You have been assigned to a new ticket: {ticket.title}"
-        ))
+        dispatch_notification(db, background_tasks, ticket.assigned_to_id, ticket.id, f"You have been assigned to a new ticket: {ticket.title}")
 
     db.commit()
     db.refresh(ticket)
@@ -230,7 +254,7 @@ async def post_message(
     type: models.MessageType = Form(models.MessageType.comment),
     file: UploadFile = File(None),
     current_user: models.Employee = Depends(get_current_user),
-) -> Any:
+    background_tasks: BackgroundTasks) -> Any:
     """
     Post a new message to a ticket thread with optional file attachment.
     """
@@ -285,12 +309,7 @@ async def post_message(
             users_to_notify.add(owner.id)
 
     for user_id in users_to_notify:
-        notification = models.Notification(
-            user_id=user_id,
-            ticket_id=ticket.id,
-            message=f"New response by {current_user.name} on ticket: {ticket.title}"
-        )
-        db.add(notification)
+        dispatch_notification(db, background_tasks, user_id, ticket.id, f"New response by {current_user.name} on ticket: {ticket.title}")
 
     db.commit()
     db.refresh(message)
@@ -338,7 +357,7 @@ def update_ticket(
     ticket_id: UUID,
     ticket_in: schemas.TicketUpdate,
     current_user: models.Employee = Depends(get_current_user),
-) -> Any:
+    background_tasks: BackgroundTasks) -> Any:
     """
     Update ticket status or priority. Also generates a system message.
     """
@@ -414,21 +433,13 @@ def update_ticket(
 
                 # Notify newly assigned employee
                 if assignee.id != current_user.id:
-                    db.add(models.Notification(
-                        user_id=assignee.id,
-                        ticket_id=ticket.id,
-                        message=f"You have been assigned to ticket: {ticket.title}"
-                    ))
+                    dispatch_notification(db, background_tasks, assignee.id, ticket.id, f"You have been assigned to ticket: {ticket.title}")
 
                 # Notify all Owners
                 owners = db.query(models.Employee).filter(models.Employee.role == "owner").all()
                 for owner in owners:
                     if owner.id != current_user.id:
-                        db.add(models.Notification(
-                            user_id=owner.id,
-                            ticket_id=ticket.id,
-                            message=f"Ticket '{ticket.title}' assigned to {assignee.name}"
-                        ))
+                        dispatch_notification(db, background_tasks, owner.id, ticket.id, f"Ticket '{ticket.title}' assigned to {assignee.name}")
 
     if "due_date" in ticket_in.model_fields_set and ticket_in.due_date != ticket.due_date:
         ticket.due_date = ticket_in.due_date
@@ -476,6 +487,7 @@ def approve_ticket(
     db: Session = Depends(get_db),
     ticket_id: UUID,
     current_user: models.Employee = Depends(get_current_user),
+    background_tasks: BackgroundTasks
 ) -> Any:
     """
     Approve a pending ticket. Only Owners can do this.
@@ -503,19 +515,11 @@ def approve_ticket(
 
     # Notify creator
     if ticket.creator_id and ticket.creator_id != current_user.id:
-        db.add(models.Notification(
-            user_id=ticket.creator_id,
-            ticket_id=ticket.id,
-            message=f"Your ticket has been approved: {ticket.title}"
-        ))
+        dispatch_notification(db, background_tasks, ticket.creator_id, ticket.id, f"Your ticket has been approved: {ticket.title}")
 
     # Notify assignee
     if ticket.assigned_to_id and ticket.assigned_to_id != current_user.id:
-        db.add(models.Notification(
-            user_id=ticket.assigned_to_id,
-            ticket_id=ticket.id,
-            message=f"Approved ticket assigned to you: {ticket.title}"
-        ))
+        dispatch_notification(db, background_tasks, ticket.assigned_to_id, ticket.id, f"Approved ticket assigned to you: {ticket.title}")
 
     db.commit()
     db.refresh(ticket)

@@ -12,3 +12,8 @@ class NotificationOut(BaseModel):
     created_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
+
+class PushSubscriptionIn(BaseModel):
+    endpoint: str
+    p256dh: str
+    auth: str
