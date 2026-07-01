@@ -177,30 +177,48 @@ def create_ticket(
     if ticket.assigned_to_id and ticket.assigned_to_id != current_user.id:
         db.add(models.TicketParticipant(ticket_id=ticket.id, employee_id=ticket.assigned_to_id))
 
-    # Notify all Owners
-    owners = db.query(models.Employee).filter(models.Employee.role == "owner").all()
+    # Track who we have notified to avoid duplicates
+    notified_user_ids = {current_user.id}
 
-    # Get assignee name if exists
-    assignee_name = ""
-    if ticket.assigned_to_id:
-        assignee = db.query(models.Employee).filter(models.Employee.id == ticket.assigned_to_id).first()
-        if assignee:
-            assignee_name = assignee.name
+    # Check if this is a universal ticket
+    is_universal = db.query(models.Room).filter(
+        models.Room.id.in_(ticket_in.room_ids),
+        models.Room.type == models.RoomType.universal
+    ).first() is not None
 
-    for owner in owners:
-        if owner.id != current_user.id:
-            if ticket.approval_status == models.ApprovalStatus.pending:
-                msg = f"New ticket requires approval: {ticket.title}"
-            elif assignee_name:
-                msg = f"New ticket created (assigned to {assignee_name}): {ticket.title}"
-            else:
-                msg = f"New ticket created: {ticket.title}"
+    if is_universal:
+        # Notify ALL active staff
+        all_staff = db.query(models.Employee).filter(models.Employee.is_active == True).all()
+        for staff in all_staff:
+            if staff.id not in notified_user_ids:
+                dispatch_notification(db, background_tasks, staff.id, ticket.id, f"📢 New Universal Announcement: {ticket.title}")
+                notified_user_ids.add(staff.id)
+    else:
+        # Notify all Owners
+        owners = db.query(models.Employee).filter(models.Employee.role == "owner").all()
+        
+        assignee_name = ""
+        if ticket.assigned_to_id:
+            assignee = db.query(models.Employee).filter(models.Employee.id == ticket.assigned_to_id).first()
+            if assignee:
+                assignee_name = assignee.name
 
-            dispatch_notification(db, background_tasks, owner.id, ticket.id, msg)
+        for owner in owners:
+            if owner.id not in notified_user_ids:
+                if ticket.approval_status == models.ApprovalStatus.pending:
+                    msg = f"New ticket requires approval: {ticket.title}"
+                elif assignee_name:
+                    msg = f"New ticket created (assigned to {assignee_name}): {ticket.title}"
+                else:
+                    msg = f"New ticket created: {ticket.title}"
+
+                dispatch_notification(db, background_tasks, owner.id, ticket.id, msg)
+                notified_user_ids.add(owner.id)
 
     # Notify Assignee
-    if ticket.assigned_to_id and ticket.assigned_to_id != current_user.id:
+    if ticket.assigned_to_id and ticket.assigned_to_id not in notified_user_ids:
         dispatch_notification(db, background_tasks, ticket.assigned_to_id, ticket.id, f"You have been assigned to a new ticket: {ticket.title}")
+        notified_user_ids.add(ticket.assigned_to_id)
 
     db.commit()
     db.refresh(ticket)
