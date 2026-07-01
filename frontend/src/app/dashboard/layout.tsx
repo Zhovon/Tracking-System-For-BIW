@@ -169,9 +169,23 @@ export default function DashboardLayout({
             const permission = await Notification.requestPermission();
             if (permission === 'granted') {
               const VAPID_PUBLIC_KEY = "BLceEsZwd9FEUWTp0XF6lph5FKxTf49np0ecfubdLh9oF9jOK0jQS6rhqPtXzjcrRzVzjvsu7U0AIWawR_mJWvg";
+              
+              const urlBase64ToUint8Array = (base64String: string) => {
+                const padding = '='.repeat((4 - base64String.length % 4) % 4);
+                const base64 = (base64String + padding)
+                  .replace(/\-/g, '+')
+                  .replace(/_/g, '/');
+                const rawData = window.atob(base64);
+                const outputArray = new Uint8Array(rawData.length);
+                for (let i = 0; i < rawData.length; ++i) {
+                  outputArray[i] = rawData.charCodeAt(i);
+                }
+                return outputArray;
+              };
+
               sub = await reg.pushManager.subscribe({
                 userVisibleOnly: true,
-                applicationServerKey: VAPID_PUBLIC_KEY
+                applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY)
               });
             }
           }
