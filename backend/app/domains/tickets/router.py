@@ -196,7 +196,7 @@ def create_ticket(
     else:
         # Notify all Owners
         owners = db.query(models.Employee).filter(models.Employee.role == "owner").all()
-        
+
         assignee_name = ""
         if ticket.assigned_to_id:
             assignee = db.query(models.Employee).filter(models.Employee.id == ticket.assigned_to_id).first()
