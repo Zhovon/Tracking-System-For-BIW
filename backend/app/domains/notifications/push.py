@@ -1,7 +1,8 @@
 import json
-import os
 import logging
-from pywebpush import webpush, WebPushException
+import os
+
+from pywebpush import WebPushException, webpush
 
 logger = logging.getLogger(__name__)
 

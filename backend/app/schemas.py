@@ -1,4 +1,4 @@
-from app.domains.notifications.schemas import NotificationOut
+from app.domains.notifications.schemas import NotificationOut, PushSubscriptionIn
 from app.domains.rooms.schemas import RoomCreate, RoomMemberCreate, RoomOut, RoomUpdate
 from app.domains.tickets.schemas import (
     MessageCreate,
@@ -25,4 +25,5 @@ __all__ = [
     "MessageOut",
     "MessageCreate",
     "NotificationOut",
+    "PushSubscriptionIn",
 ]

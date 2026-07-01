@@ -1,4 +1,5 @@
 from datetime import datetime
+from typing import Optional
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict
@@ -6,7 +7,7 @@ from pydantic import BaseModel, ConfigDict
 
 class NotificationOut(BaseModel):
     id: UUID
-    ticket_id: UUID | None = None
+    ticket_id: Optional[UUID] = None
     message: str
     is_read: bool
     created_at: datetime
