@@ -74,7 +74,7 @@ def get_users(
         has_universal = any(r.type == models.RoomType.universal for r in rooms)
 
         if has_universal:
-            return db.query(models.Employee).filter(models.Employee.is_active == True).all()
+            return db.query(models.Employee).filter(models.Employee.is_active == True).order_by(models.Employee.staff_id).all()
         else:
             return (
                 db.query(models.Employee)
@@ -84,11 +84,12 @@ def get_users(
                     models.RoomMember.room_id.in_(target_ids)
                 )
                 .distinct()
+                .order_by(models.Employee.staff_id)
                 .all()
             )
 
     if current_user.role in ["owner", "hr", "it_team", "executive"]:
-        return db.query(models.Employee).filter(models.Employee.is_active == True).all()
+        return db.query(models.Employee).filter(models.Employee.is_active == True).order_by(models.Employee.staff_id).all()
     elif current_user.role == "manager":
         # Find all branch rooms this manager is a member of
         manager_branch_ids = [
@@ -107,6 +108,7 @@ def get_users(
                 models.RoomMember.room_id.in_(manager_branch_ids),
             )
             .distinct()
+            .order_by(models.Employee.staff_id)
             .all()
         )
     else:
