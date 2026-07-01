@@ -28,19 +28,19 @@ const ROLE_LABELS: Record<string, string> = {
 export const getRoleLabel = (role: string) =>
   ROLE_LABELS[role] ?? role.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
 
-function SidebarNav({ rooms, isLoading, error, currentUser }: any) {
+function SidebarNav({ rooms, isLoading, error, currentUser, router }: any) {
   const searchParams = useSearchParams();
   const activeRoom = searchParams?.get('room');
 
   return (
     <nav className="space-y-1 px-3">
-      <Link
-        href="/dashboard"
-        className={`flex items-center gap-3 px-3 py-2 text-sm font-semibold rounded-md transition-colors mb-2 ${!activeRoom ? 'text-indigo-600 bg-indigo-50/50 hover:bg-indigo-50' : 'hover:bg-slate-100 text-slate-700'}`}
+      <button
+        onClick={() => router.push('/dashboard')}
+        className={`w-full flex items-center gap-3 px-3 py-2 text-sm font-semibold rounded-md transition-colors mb-2 ${!activeRoom ? 'text-indigo-600 bg-indigo-50/50 hover:bg-indigo-50' : 'hover:bg-slate-100 text-slate-700'}`}
       >
         <LayoutDashboard className={`w-4 h-4 ${!activeRoom ? 'text-indigo-500' : 'text-slate-500'}`} />
         All Tickets
-      </Link>
+      </button>
       
       {isLoading && (
         <div className="space-y-2 px-3 py-1">
@@ -385,7 +385,7 @@ export default function DashboardLayout({
         </div>
         <div className="flex-1 overflow-y-auto py-4">
           <Suspense fallback={<div className="p-4 text-center text-sm text-slate-500">Loading nav...</div>}>
-            <SidebarNav rooms={rooms} isLoading={isLoading} error={error} currentUser={currentUser} />
+            <SidebarNav rooms={rooms} isLoading={isLoading} error={error} currentUser={currentUser} router={router} />
           </Suspense>
         </div>
 
