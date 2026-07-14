@@ -337,8 +337,8 @@ export default function StaffManagementPage() {
           </div>
 
           {/* Right Column (Active Staff Directory) */}
-          <Card className="lg:col-span-2 bg-white border-slate-200 shadow-sm flex flex-col h-full self-start">
-            <CardHeader>
+          <Card className="lg:col-span-2 bg-white border-slate-200 shadow-sm flex flex-col h-[calc(100vh-6rem)] sticky top-8">
+            <CardHeader className="shrink-0">
               <CardTitle className="text-xl text-slate-900">Active Staff Directory</CardTitle>
               <CardDescription className="text-slate-500">All users currently in the system.</CardDescription>
               <div className="mt-4">
@@ -350,9 +350,9 @@ export default function StaffManagementPage() {
                 />
               </div>
             </CardHeader>
-            <CardContent>
+            <CardContent className="flex-1 min-h-0 flex flex-col overflow-hidden p-0 px-6 pb-6">
               {loadingUsers ? (
-                <div className="flex flex-col gap-3 animate-pulse">
+                <div className="flex flex-col gap-3 animate-pulse h-full overflow-y-auto pr-2">
                   {[...Array(4)].map((_, i) => (
                     <div key={i} className="p-4 rounded-xl border border-slate-200 bg-slate-50/50 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                       <div className="flex flex-col gap-2 flex-1">
@@ -367,7 +367,7 @@ export default function StaffManagementPage() {
                   ))}
                 </div>
               ) : (
-                <div className="max-h-[640px] overflow-y-auto pr-2 flex flex-col gap-3 custom-scrollbar">
+                <div className="flex-1 overflow-y-auto pr-2 flex flex-col gap-3 custom-scrollbar">
                   {filteredUsers?.map((user: any) => (
                     <div key={user.id} className={`p-4 rounded-xl border ${user.has_penalty ? 'border-red-200 bg-red-50/50 hover:bg-red-50' : 'border-slate-200 bg-slate-50/50 hover:bg-slate-50'} flex flex-col sm:flex-row sm:items-start sm:items-center justify-between gap-3 transition-colors`}>
                       <div className="flex flex-col min-w-0">
@@ -512,7 +512,7 @@ export default function StaffManagementPage() {
                     if(editFormData.email) payload.email = editFormData.email;
                     if(editFormData.password) payload.password = editFormData.password;
                     if(editFormData.role) payload.role = editFormData.role;
-                    if(editFormData.room_ids && editFormData.room_ids.length > 0) payload.room_ids = editFormData.room_ids;
+                    if(editFormData.room_ids !== undefined) payload.room_ids = editFormData.room_ids;
                     payload.phone = editFormData.phone;
                     payload.nid = editFormData.nid;
                     payload.joining_date = editFormData.joining_date;
