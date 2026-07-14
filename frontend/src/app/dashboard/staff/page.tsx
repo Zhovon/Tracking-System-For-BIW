@@ -430,12 +430,12 @@ export default function StaffManagementPage() {
       {/* Edit User Modal */}
       {editingUser && (
         <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl overflow-hidden">
-            <div className="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+          <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+            <div className="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50 shrink-0">
               <h3 className="font-semibold text-slate-900">Edit Staff Account</h3>
               <button onClick={() => setEditingUser(null)}><X className="w-5 h-5 text-slate-400 hover:text-slate-600" /></button>
             </div>
-            <div className="p-6">
+            <div className="p-6 overflow-y-auto custom-scrollbar">
               <div className="space-y-4">
                 <div className="space-y-2">
                   <label className="text-xs font-medium text-slate-700">Full Name</label>
