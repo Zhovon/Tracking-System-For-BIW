@@ -500,7 +500,7 @@ function DashboardContent() {
         </div>
 
         <div>
-          <PropLabel>Opened</PropLabel>
+          <PropLabel>Created</PropLabel>
           <p className="text-xs text-slate-600 leading-relaxed">
             {formatDateTime(selectedTicket!.created_at)}
           </p>
@@ -827,7 +827,7 @@ function DashboardContent() {
                           <span className="font-semibold text-slate-700">
                             {selectedTicket.creator?.name}
                           </span>{" "}
-                          opened this ticket
+                          created this ticket
                         </span>
                         <span className="text-[10px] text-slate-400 ml-auto shrink-0 hidden sm:block">
                           {formatDateTime(selectedTicket.created_at)}
