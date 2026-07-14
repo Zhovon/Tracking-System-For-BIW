@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 
-import { createTicket, fetchAllRooms, fetchAllUsers, fetchRoomMembers } from "@/lib/api";
+import { createTicket, fetchAllRooms, fetchAllUsers, fetchRoomMembers, fetchCurrentUser } from "@/lib/api";
 
 export function CreateTicketDialog({ roomId }: { roomId?: string | null }) {
   const [open, setOpen] = useState(false);
@@ -36,7 +36,15 @@ export function CreateTicketDialog({ roomId }: { roomId?: string | null }) {
     enabled: !!selectedRoomId && !isUniversalRoom,
   });
 
-  const filteredUsers = roomMembers || [];
+  const { data: currentUser } = useQuery({ queryKey: ["currentUser"], queryFn: fetchCurrentUser });
+
+  const filteredUsers = (() => {
+    const users = roomMembers ? [...roomMembers] : [];
+    if (currentUser && !users.find((u: any) => u.id === currentUser.id)) {
+      users.push(currentUser);
+    }
+    return users;
+  })();
 
   const createTicketMutation = useMutation({
     mutationFn: async (newTicket: any) => {
@@ -173,8 +181,20 @@ export function CreateTicketDialog({ roomId }: { roomId?: string | null }) {
                         >
                           Unassigned
                         </CommandItem>
+                        {currentUser && (
+                          <CommandItem
+                            value={`me-${currentUser.id}`}
+                            onSelect={() => {
+                              setAssignedToId(currentUser.id);
+                              setAssigneeOpen(false);
+                            }}
+                            className="text-xs font-medium text-indigo-600 bg-indigo-50/50"
+                          >
+                            Assign to me
+                          </CommandItem>
+                        )}
                         {(() => {
-                          let options = roomMembers ? [...roomMembers] : [];
+                          let options = [...filteredUsers];
                           const filtered = options.filter((u: any) => {
                             const query = assigneeSearch.toLowerCase().trim();
                             if (!query) return true;
