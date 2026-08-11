@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 
-import { createTicket, fetchAllRooms, fetchAllUsers, fetchRoomMembers, fetchCurrentUser } from "@/lib/api";
+import { createTicket, fetchAllRooms, fetchRoomMembers, fetchCurrentUser, fetchTicketAssignees } from "@/lib/api";
 
 export function CreateTicketDialog({ roomId }: { roomId?: string | null }) {
   const [open, setOpen] = useState(false);
@@ -29,21 +29,26 @@ export function CreateTicketDialog({ roomId }: { roomId?: string | null }) {
 
   const selectedRoom = rooms?.find((r: any) => r.id === selectedRoomId);
   const isUniversalRoom = selectedRoom?.type === "universal" || selectedRoom?.name?.toLowerCase() === "universal";
+  const selectableRooms = rooms;
+  const { data: currentUser } = useQuery({ queryKey: ["currentUser"], queryFn: fetchCurrentUser });
 
   const { data: roomMembers } = useQuery({
     queryKey: ["roomMembers", selectedRoomId],
     queryFn: () => fetchRoomMembers(selectedRoomId),
-    enabled: !!selectedRoomId && !isUniversalRoom,
+    enabled: !!selectedRoomId && !isUniversalRoom && ["owner", "manager"].includes(currentUser?.role),
   });
 
-  const { data: currentUser } = useQuery({ queryKey: ["currentUser"], queryFn: fetchCurrentUser });
+  const { data: requestRecipients } = useQuery({
+    queryKey: ["ticketAssignees"],
+    queryFn: fetchTicketAssignees,
+  });
 
   const filteredUsers = (() => {
-    const users = roomMembers ? [...roomMembers] : [];
+    const users = [...(roomMembers || []), ...(requestRecipients || [])];
     if (currentUser && !users.find((u: any) => u.id === currentUser.id)) {
       users.push(currentUser);
     }
-    return users;
+    return users.filter((user: any, index: number) => users.findIndex((candidate: any) => candidate.id === user.id) === index);
   })();
 
   const createTicketMutation = useMutation({
@@ -123,11 +128,11 @@ export function CreateTicketDialog({ roomId }: { roomId?: string | null }) {
             <Select value={selectedRoomId} onValueChange={(val) => { setSelectedRoomId(val || ""); setAssignedToId(""); }} required>
               <SelectTrigger>
                 <SelectValue placeholder="Select a room">
-                  {rooms?.find((r: any) => r.id === selectedRoomId)?.name || "Select a room"}
+                  {selectableRooms?.find((r: any) => r.id === selectedRoomId)?.name || "Select a room"}
                 </SelectValue>
               </SelectTrigger>
               <SelectContent>
-                {rooms?.map((r: any) => (
+                {selectableRooms?.map((r: any) => (
                   <SelectItem key={r.id} value={r.id}>{r.name}</SelectItem>
                 ))}
               </SelectContent>

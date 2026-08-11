@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { fetchRooms, fetchCurrentUser, fetchNotifications, markNotificationRead } from "@/lib/api";
+import { fetchRooms, fetchCurrentUser, fetchNotifications, markNotificationRead, subscribeToPush } from "@/lib/api";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense } from "react";
@@ -216,21 +216,11 @@ export default function DashboardLayout({
             // Send to our backend
             const subJSON = sub.toJSON();
             if (subJSON.endpoint && subJSON.keys) {
-              const token = (await supabase.auth.getSession()).data.session?.access_token;
-              if (token) {
-                await fetch('/api/v1/notifications/push/subscribe', {
-                  method: 'POST',
-                  headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
-                  },
-                  body: JSON.stringify({
-                    endpoint: subJSON.endpoint,
-                    p256dh: subJSON.keys.p256dh,
-                    auth: subJSON.keys.auth
-                  })
-                });
-              }
+              await subscribeToPush({
+                endpoint: subJSON.endpoint,
+                p256dh: subJSON.keys.p256dh,
+                auth: subJSON.keys.auth,
+              });
             }
           }
         } catch (e) {

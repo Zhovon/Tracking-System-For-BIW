@@ -20,6 +20,17 @@ class UserOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
+class UserAssigneeOut(BaseModel):
+    """Safe employee fields shown when selecting a ticket recipient."""
+
+    id: UUID
+    staff_id: Optional[str] = None
+    name: str
+    role: str
+
+    model_config = ConfigDict(from_attributes=True)
+
+
 class UserCreate(BaseModel):
     name: str
     email: str

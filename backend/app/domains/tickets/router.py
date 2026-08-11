@@ -141,13 +141,41 @@ def create_ticket(
     current_user: models.Employee = Depends(get_current_user),
     background_tasks: BackgroundTasks) -> Any:
     """
-    Create new ticket. Only Managers, HR, IT, and Owners can create.
+    Create a new ticket.
+
+    Every active employee can create a ticket in a room they can access.
+    Owners may create tickets in any active room.
     """
-    if current_user.role not in ["owner", "manager", "hr", "it_team"]:
-        raise HTTPException(
-            status_code=403,
-            detail="Staff cannot create tickets. They can only resolve assigned tasks.",
+    target_rooms = db.query(models.Room).filter(
+        models.Room.id.in_(ticket_in.room_ids),
+        models.Room.is_active == True,
+    ).all()
+    if not target_rooms or len(target_rooms) != len(set(ticket_in.room_ids)):
+        raise HTTPException(status_code=400, detail="One or more selected rooms do not exist or are inactive")
+
+    if current_user.role != "owner":
+        accessible_room_ids = {
+            membership.room_id
+            for membership in current_user.room_memberships
+            if membership.room.is_active
+        }
+        accessible_room_ids.update(
+            room.id for room in target_rooms if room.type == models.RoomType.universal
         )
+        if any(room.id not in accessible_room_ids for room in target_rooms):
+            raise HTTPException(status_code=403, detail="Not authorized to create a ticket in one or more selected rooms")
+
+    if ticket_in.assigned_to_id:
+        assignee = (
+            db.query(models.Employee)
+            .filter(
+                models.Employee.id == ticket_in.assigned_to_id,
+                models.Employee.is_active == True,
+            )
+            .first()
+        )
+        if not assignee:
+            raise HTTPException(status_code=400, detail="Assigned employee was not found or is inactive")
 
     approval_status = (
         models.ApprovalStatus.approved
@@ -181,10 +209,7 @@ def create_ticket(
     notified_user_ids = {current_user.id}
 
     # Check if this is a universal ticket
-    is_universal = db.query(models.Room).filter(
-        models.Room.id.in_(ticket_in.room_ids),
-        models.Room.type == models.RoomType.universal
-    ).first() is not None
+    is_universal = any(room.type == models.RoomType.universal for room in target_rooms)
 
     if is_universal:
         # Notify ALL active staff
@@ -280,7 +305,7 @@ async def post_message(
     if not ticket or not ticket.is_active:
         raise HTTPException(status_code=404, detail="Ticket not found")
 
-    # Security check
+    # Security check. Everyone can comment on Universal announcements.
     if current_user.role != "owner":
         is_participant = db.query(models.TicketParticipant).filter(
             models.TicketParticipant.ticket_id == ticket.id,
@@ -393,6 +418,9 @@ def update_ticket(
 
         if not is_participant and not is_universal:
             raise HTTPException(status_code=403, detail="Not authorized to modify this ticket")
+        if is_universal and current_user.role not in ["manager", "hr", "it_team"]:
+            if current_user.id not in [ticket.creator_id, ticket.assigned_to_id]:
+                raise HTTPException(status_code=403, detail="Not authorized to modify this announcement")
 
     # Update logic and system message generation
     if ticket_in.status is not None and ticket_in.status != ticket.status:
@@ -508,14 +536,28 @@ def approve_ticket(
     background_tasks: BackgroundTasks
 ) -> Any:
     """
-    Approve a pending ticket. Only Owners can do this.
+    Approve a pending ticket. Owners can approve any ticket; branch managers
+    can approve tickets linked only to their own branch rooms.
     """
-    if current_user.role != "owner":
-        raise HTTPException(status_code=403, detail="Only owners can approve tickets")
-
     ticket = db.query(models.Ticket).filter(models.Ticket.id == ticket_id).first()
     if not ticket or not ticket.is_active:
         raise HTTPException(status_code=404, detail="Ticket not found")
+
+    if current_user.role != "owner":
+        if current_user.role != "manager":
+            raise HTTPException(status_code=403, detail="Only owners and branch managers can approve tickets")
+
+        manager_branch_ids = {
+            membership.room_id
+            for membership in current_user.room_memberships
+            if membership.room.type == models.RoomType.branch
+        }
+        ticket_room_ids = {
+            room_link.room_id
+            for room_link in db.query(models.TicketRoom).filter(models.TicketRoom.ticket_id == ticket.id).all()
+        }
+        if not ticket_room_ids or not ticket_room_ids.issubset(manager_branch_ids):
+            raise HTTPException(status_code=403, detail="Managers can approve only tickets for their own branch")
 
     if ticket.approval_status == models.ApprovalStatus.approved:
         raise HTTPException(status_code=400, detail="Ticket is already approved")

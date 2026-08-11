@@ -149,9 +149,13 @@ function DashboardContent() {
     },
   });
 
-  const { data: allUsers } = useQuery({ queryKey: ["allUsers"], queryFn: fetchAllUsers });
   const { data: currentUser } = useQuery({ queryKey: ["currentUser"], queryFn: fetchCurrentUser });
   const currentUserRole = currentUser?.role || "";
+  const { data: allUsers } = useQuery({
+    queryKey: ["allUsers"],
+    queryFn: fetchAllUsers,
+    enabled: ["owner", "manager"].includes(currentUserRole),
+  });
 
   const approveTicketMutation = useMutation({
     mutationFn: () => approveTicket(ticketId as string),
@@ -231,12 +235,19 @@ function DashboardContent() {
   const isSelectedTicketUniversal = selectedTicket?.rooms?.some(
     (r: any) => r.type === "universal" || r.name?.toLowerCase() === "universal"
   );
+  const canApproveSelectedTicket = currentUserRole === "owner" || (
+    currentUserRole === "manager" &&
+    !!selectedTicket?.rooms?.length &&
+    selectedTicket.rooms.every(
+      (room: any) => room.type === "branch" && currentUser?.room_ids?.includes(room.id)
+    )
+  );
 
   const ticketRoomIds = selectedTicket?.rooms?.map((r: any) => r.id).join(",") || "";
   const { data: ticketRoomMembers } = useQuery({
     queryKey: ["ticketRoomMembers", ticketRoomIds],
     queryFn: () => ticketRoomIds ? fetchRoomMembers(ticketRoomIds) : Promise.resolve([]),
-    enabled: !!ticketRoomIds && !isSelectedTicketUniversal,
+    enabled: !!ticketRoomIds && !isSelectedTicketUniversal && ["owner", "manager"].includes(currentUserRole),
   });
 
   const handleDueDateBlur = () => {
@@ -524,7 +535,7 @@ function DashboardContent() {
             <Ticket className="w-4 h-4 text-slate-400 shrink-0" />
             <h2 className="text-sm font-semibold text-slate-800 truncate">{roomName}</h2>
           </div>
-          {["owner", "manager", "hr", "it_team"].includes(currentUserRole) && (
+          {currentUser && (
             <CreateTicketDialog roomId={roomId} />
           )}
         </div>
@@ -732,7 +743,7 @@ function DashboardContent() {
                   {/* Action buttons */}
                   <div className="flex flex-wrap gap-1.5 shrink-0 justify-end">
                     {selectedTicket.approval_status === "pending" &&
-                      currentUserRole === "owner" && (
+                      canApproveSelectedTicket && (
                         <Button
                           size="sm"
                           className="bg-amber-500 hover:bg-amber-600 text-white h-8 text-xs px-3"

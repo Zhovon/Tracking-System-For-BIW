@@ -111,6 +111,10 @@ export async function fetchCurrentUser() {
   return fetchApi(`/users/me`);
 }
 
+export async function fetchTicketAssignees() {
+  return fetchApi(`/users/assignees`);
+}
+
 export async function createUser(userData: any) {
   return fetchApi(`/users`, {
     method: "POST",
@@ -125,6 +129,13 @@ export async function fetchNotifications(skip: number = 0, limit: number = 20) {
 export async function markNotificationRead(id: string) {
   return fetchApi(`/notifications/${id}/read`, {
     method: "PATCH",
+  });
+}
+
+export async function subscribeToPush(subscription: { endpoint: string; p256dh: string; auth: string }) {
+  return fetchApi(`/notifications/push/subscribe`, {
+    method: "POST",
+    body: JSON.stringify(subscription),
   });
 }
 

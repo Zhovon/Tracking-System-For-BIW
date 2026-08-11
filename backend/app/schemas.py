@@ -8,10 +8,11 @@ from app.domains.tickets.schemas import (
     TicketOut,
     TicketUpdate,
 )
-from app.domains.users.schemas import UserCreate, UserOut, UserUpdate
+from app.domains.users.schemas import UserAssigneeOut, UserCreate, UserOut, UserUpdate
 
 __all__ = [
     "UserOut",
+    "UserAssigneeOut",
     "UserCreate",
     "UserUpdate",
     "RoomOut",

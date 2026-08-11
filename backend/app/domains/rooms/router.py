@@ -10,11 +10,29 @@ router = APIRouter()
 
 
 @router.get("/all", response_model=List[schemas.RoomOut])
-def get_all_rooms(db: Session = Depends(get_db)) -> Any:
+def get_all_rooms(
+    db: Session = Depends(get_db),
+    current_user: models.Employee = Depends(get_current_user),
+) -> Any:
     """
-    Get all active rooms for escalation dropdowns.
+    Get the active rooms available to the current user.
+
+    Owners can manage every room. Other employees can only see rooms they
+    belong to, plus the Universal room used for company-wide announcements.
     """
-    return db.query(models.Room).filter(models.Room.is_active == True).all()
+    if current_user.role == "owner":
+        return db.query(models.Room).filter(models.Room.is_active == True).all()
+
+    user_rooms = [
+        membership.room
+        for membership in current_user.room_memberships
+        if membership.room.is_active
+    ]
+    universal_rooms = db.query(models.Room).filter(
+        models.Room.type == models.RoomType.universal,
+        models.Room.is_active == True,
+    ).all()
+    return list({room.id: room for room in user_rooms + universal_rooms}.values())
 
 
 @router.post("", response_model=schemas.RoomOut)

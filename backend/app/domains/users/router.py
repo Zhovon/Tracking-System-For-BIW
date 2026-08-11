@@ -44,6 +44,23 @@ def get_current_user_profile(current_user: models.Employee = Depends(get_current
     return current_user
 
 
+@router.get("/assignees", response_model=List[schemas.UserAssigneeOut])
+def get_ticket_assignees(
+    db: Session = Depends(get_db),
+    current_user: models.Employee = Depends(get_current_user),
+) -> Any:
+    """Return safe contact details for owners and managers who can receive requests."""
+    return (
+        db.query(models.Employee)
+        .filter(
+            models.Employee.is_active == True,
+            models.Employee.role.in_(["owner", "manager"]),
+        )
+        .order_by(models.Employee.role, models.Employee.staff_id)
+        .all()
+    )
+
+
 @router.get("", response_model=List[schemas.UserOut])
 def get_users(
     room_id: str = None,
@@ -51,10 +68,11 @@ def get_users(
     current_user: models.Employee = Depends(get_current_user),
 ) -> Any:
     """
-    Get all employees. Scoped by role:
-    - Owners, HR, IT Support, Executives see all.
-    - Managers see only employees sharing branch rooms they manage.
-    - If room_id is provided, returns all active employees who are members of that room (supports comma-separated room IDs).
+    Get employee data for staff administration and assignment.
+
+    Owners see all employees. Managers see only employees in their managed
+    branches. Other employees must use /users/me; they cannot enumerate staff
+    or room membership data.
     """
     if room_id:
         try:
@@ -67,8 +85,21 @@ def get_users(
 
         # Load specified rooms
         rooms = db.query(models.Room).filter(models.Room.id.in_(target_ids), models.Room.is_active == True).all()
-        if not rooms:
+        if len(rooms) != len(target_ids):
             return []
+
+        if current_user.role == "owner":
+            pass
+        elif current_user.role == "manager":
+            manager_branch_ids = {
+                membership.room_id
+                for membership in current_user.room_memberships
+                if membership.room.type == models.RoomType.branch
+            }
+            if any(room.id not in manager_branch_ids for room in rooms):
+                raise HTTPException(status_code=403, detail="Not authorized to view staff outside your branch")
+        else:
+            raise HTTPException(status_code=403, detail="Not authorized to list staff")
 
         # Check if any room is universal
         has_universal = any(r.type == models.RoomType.universal for r in rooms)
@@ -88,7 +119,7 @@ def get_users(
                 .all()
             )
 
-    if current_user.role in ["owner", "hr", "it_team", "executive"]:
+    if current_user.role == "owner":
         return db.query(models.Employee).filter(models.Employee.is_active == True).order_by(models.Employee.staff_id).all()
     elif current_user.role == "manager":
         # Find all branch rooms this manager is a member of
@@ -111,8 +142,7 @@ def get_users(
             .order_by(models.Employee.staff_id)
             .all()
         )
-    else:
-        return db.query(models.Employee).filter(models.Employee.is_active == True).all()
+    raise HTTPException(status_code=403, detail="Not authorized to list staff")
 
 
 
