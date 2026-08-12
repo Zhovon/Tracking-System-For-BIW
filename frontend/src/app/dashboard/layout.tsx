@@ -11,6 +11,9 @@ import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { ChangePasswordDialog } from "@/components/ChangePasswordDialog";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useT } from "@/lib/i18n";
+import { LanguageToggle } from "@/components/LanguageToggle";
+import { formatDhakaDateTime } from "@/lib/utils";
 
 export const getSlug = (name: string) => name.toLowerCase().replace(/[^a-z0-9]+/g, '-');
 
@@ -28,9 +31,20 @@ const ROLE_LABELS: Record<string, string> = {
 export const getRoleLabel = (role: string) =>
   ROLE_LABELS[role] ?? role.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
 
+/** Translate a role, falling back to the English title-case for unknown roles. */
+export const useRoleLabel = () => {
+  const t = useT();
+  return (role: string) => {
+    const key = `role.${role}`;
+    const translated = t(key);
+    return translated === key ? getRoleLabel(role) : translated;
+  };
+};
+
 function SidebarNav({ rooms, isLoading, error, currentUser, router, onNavClick }: any) {
   const searchParams = useSearchParams();
   const activeRoom = searchParams?.get('room');
+  const t = useT();
 
   return (
     <nav className="space-y-1 px-3">
@@ -42,7 +56,7 @@ function SidebarNav({ rooms, isLoading, error, currentUser, router, onNavClick }
         className={`w-full flex items-center gap-3 px-3 py-2 text-sm font-semibold rounded-md transition-colors mb-2 ${!activeRoom ? 'text-indigo-600 bg-indigo-50/50 hover:bg-indigo-50' : 'hover:bg-slate-100 text-slate-700'}`}
       >
         <LayoutDashboard className={`w-4 h-4 ${!activeRoom ? 'text-indigo-500' : 'text-slate-500'}`} />
-        All Tickets
+        {t("nav.allTickets")}
       </button>
       
       {isLoading && (
@@ -57,7 +71,7 @@ function SidebarNav({ rooms, isLoading, error, currentUser, router, onNavClick }
       )}
       
       {error && (
-        <div className="px-3 text-sm text-red-500">Failed to load rooms</div>
+        <div className="px-3 text-sm text-red-500">{t("nav.failedRooms")}</div>
       )}
 
       {rooms?.map((room: any) => {
@@ -86,14 +100,14 @@ function SidebarNav({ rooms, isLoading, error, currentUser, router, onNavClick }
         <>
           <div className="my-4 border-t border-slate-200"></div>
           <h2 className="px-3 text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
-            Administration
+            {t("nav.administration")}
           </h2>
           <Link
             href="/dashboard/staff"
             className="flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-md hover:bg-slate-100 transition-colors text-indigo-600"
           >
             <UserPlus className="w-4 h-4" />
-            Staff Management
+            {t("nav.staffManagement")}
           </Link>
         </>
       )}
@@ -107,7 +121,9 @@ export default function DashboardLayout({
   children: React.ReactNode;
 }) {
   const router = useRouter();
-  
+  const t = useT();
+  const roleLabel = useRoleLabel();
+
   // Protect route
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -252,7 +268,7 @@ export default function DashboardLayout({
           // Show native notification
           if (typeof window !== 'undefined' && "Notification" in window && Notification.permission === "granted") {
             try {
-              new Notification("New Notification", {
+              new Notification(t("notif.new"), {
                 body: payload.new.message,
                 icon: "/logo.jpeg"
               });
@@ -264,7 +280,7 @@ export default function DashboardLayout({
           // Always show in-app toast (crucial for iOS/Android Safari which blocks native popups and sound)
           setToastNotification({
             id: payload.new.id,
-            title: "New Notification",
+            title: t("notif.new"),
             message: payload.new.message,
             ticketId: payload.new.ticket_id
           });
@@ -323,11 +339,11 @@ export default function DashboardLayout({
       {showNotifications && (
         <div className="hidden md:block absolute top-full left-0 mt-2 w-80 bg-white rounded-xl shadow-xl border border-slate-200 z-50 overflow-hidden">
           <div className="p-3 border-b border-slate-200 bg-slate-50 font-semibold text-sm">
-            Notifications
+            {t("notif.title")}
           </div>
           <div className="max-h-80 overflow-y-auto">
             {notifications?.length === 0 ? (
-              <div className="p-4 text-center text-sm text-zinc-500">No notifications</div>
+              <div className="p-4 text-center text-sm text-zinc-500">{t("notif.none")}</div>
             ) : (
               <div className="divide-y divide-slate-100">
                 {notifications?.map((notif: any) => (
@@ -338,13 +354,13 @@ export default function DashboardLayout({
                   >
                     <div className="flex-1">
                       <p className="text-slate-800">{notif.message}</p>
-                      <p className="text-xs text-slate-400 mt-1">{new Date(notif.created_at.endsWith("Z") || notif.created_at.includes("+") ? notif.created_at : notif.created_at + "Z").toLocaleString()}</p>
+                      <p className="text-xs text-slate-400 mt-1">{formatDhakaDateTime(notif.created_at)}</p>
                     </div>
                     {!notif.is_read && (
                       <button 
                         onClick={(e) => { e.stopPropagation(); markReadMutation.mutate(notif.id); }}
                         className="text-emerald-500 hover:text-emerald-600 transition-colors self-start mt-1"
-                        title="Mark as read"
+                        title={t("notif.markRead")}
                       >
                         <CheckCircle2 className="w-4 h-4" />
                       </button>
@@ -359,7 +375,7 @@ export default function DashboardLayout({
             onClick={() => setShowNotifications(false)}
             className="block p-3 border-t border-slate-200 bg-slate-50 text-center text-sm font-semibold text-indigo-600 hover:bg-slate-100 transition-colors"
           >
-            See all in Notifications
+            {t("notif.seeAll")}
           </Link>
         </div>
       )}
@@ -399,24 +415,27 @@ export default function DashboardLayout({
           <NotificationBell />
         </div>
         <div className="flex-1 overflow-y-auto py-4">
-          <Suspense fallback={<div className="p-4 text-center text-sm text-slate-500">Loading nav...</div>}>
+          <Suspense fallback={<div className="p-4 text-center text-sm text-slate-500">{t("nav.loadingNav")}</div>}>
             <SidebarNav rooms={rooms} isLoading={isLoading} error={error} currentUser={currentUser} router={router} />
           </Suspense>
         </div>
 
-        <div className="p-4 border-t border-slate-200 bg-slate-50 flex items-center justify-between">
+        <div className="px-4 pt-3 border-t border-slate-200 bg-slate-50">
+          <LanguageToggle className="w-full justify-center" />
+        </div>
+        <div className="p-4 bg-slate-50 flex items-center justify-between">
           <div className="flex flex-col">
             <span className="text-sm font-medium text-slate-800">{currentUser?.name}</span>
-            <span className="text-xs text-slate-500">{getRoleLabel(currentUser?.role ?? '')}</span>
+            <span className="text-xs text-slate-500">{roleLabel(currentUser?.role ?? '')}</span>
           </div>
           <div className="flex gap-1">
             <ChangePasswordDialog>
-              <Button variant="ghost" size="icon" className="text-slate-500 hover:text-slate-900 hover:bg-slate-200" title="Change Password">
+              <Button variant="ghost" size="icon" className="text-slate-500 hover:text-slate-900 hover:bg-slate-200" title={t("nav.changePassword")}>
                 <LogOut className="h-4 w-4 hidden" /> {/* Dummy to keep sizing */}
                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-key-round"><path d="M2 18v3c0 .6.4 1 1 1h4v-3h3v-3h2l1.4-1.4a6.5 6.5 0 1 0-4-4Z"/><circle cx="16.5" cy="7.5" r=".5"/></svg>
               </Button>
             </ChangePasswordDialog>
-            <Button variant="ghost" size="icon" onClick={handleLogout} className="text-slate-500 hover:text-red-600 hover:bg-red-50" title="Log Out">
+            <Button variant="ghost" size="icon" onClick={handleLogout} className="text-slate-500 hover:text-red-600 hover:bg-red-50" title={t("nav.logout")}>
               <LogOut className="h-4 w-4" />
             </Button>
           </div>
@@ -441,12 +460,12 @@ export default function DashboardLayout({
           className="flex flex-col items-center justify-center w-16 h-full text-slate-500 hover:text-indigo-600 transition-colors active:scale-95"
         >
           <LayoutDashboard className="w-5 h-5 mb-1" />
-          <span className="text-[10px] font-medium">Tickets</span>
+          <span className="text-[10px] font-medium">{t("nav.tickets")}</span>
         </button>
-        
+
         <button onClick={() => { setMobileRoomsOpen(!mobileRoomsOpen); setMobileProfileOpen(false); setShowNotifications(false); }} className="flex flex-col items-center justify-center w-16 h-full text-slate-500 hover:text-indigo-600 transition-colors active:scale-95">
           <Users className="w-5 h-5 mb-1" />
-          <span className="text-[10px] font-medium">Rooms</span>
+          <span className="text-[10px] font-medium">{t("nav.rooms")}</span>
         </button>
 
         <Link 
@@ -455,7 +474,7 @@ export default function DashboardLayout({
           className="flex flex-col items-center justify-center w-16 h-full text-slate-500 hover:text-indigo-600 transition-colors active:scale-95 relative"
         >
           <Bell className="w-5 h-5 mb-1" />
-          <span className="text-[10px] font-medium">Alerts</span>
+          <span className="text-[10px] font-medium">{t("nav.alerts")}</span>
           {unreadCount > 0 && (
             <span className="absolute top-2 right-4 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white" />
           )}
@@ -463,7 +482,7 @@ export default function DashboardLayout({
 
         <button onClick={() => { setMobileProfileOpen(!mobileProfileOpen); setMobileRoomsOpen(false); setShowNotifications(false); }} className="flex flex-col items-center justify-center w-16 h-full text-slate-500 hover:text-indigo-600 transition-colors active:scale-95">
           <User className="w-5 h-5 mb-1" />
-          <span className="text-[10px] font-medium">Profile</span>
+          <span className="text-[10px] font-medium">{t("nav.profile")}</span>
         </button>
       </div>
 
@@ -471,7 +490,7 @@ export default function DashboardLayout({
       {mobileRoomsOpen && (
         <div className="md:hidden fixed bottom-[60px] left-0 right-0 bg-white border-t border-slate-200 rounded-t-3xl shadow-[0_-15px_40px_rgba(0,0,0,0.12)] z-40 max-h-[60vh] overflow-hidden flex flex-col animate-in slide-in-from-bottom duration-300 ease-out">
           <div className="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
-            <h3 className="font-semibold text-sm">Your Rooms</h3>
+            <h3 className="font-semibold text-sm">{t("nav.yourRooms")}</h3>
             <button onClick={() => setMobileRoomsOpen(false)}><X className="w-4 h-4 text-slate-400" /></button>
           </div>
           <div className="overflow-y-auto p-2">
@@ -481,7 +500,7 @@ export default function DashboardLayout({
               className="flex items-center gap-3 p-3 rounded-xl hover:bg-slate-50 transition-colors active:bg-slate-100 mb-1 text-indigo-600 bg-indigo-50/50"
             >
               <div className="p-2 bg-indigo-50 rounded-lg"><LayoutDashboard className="w-4 h-4 text-indigo-500" /></div>
-              All Tickets
+              {t("nav.allTickets")}
             </Link>
             {rooms?.map((room: any) => (
               <Link
@@ -509,7 +528,7 @@ export default function DashboardLayout({
                   className="flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-xl hover:bg-slate-50 transition-colors text-indigo-600"
                 >
                   <div className="p-2 bg-indigo-50 rounded-lg"><UserPlus className="w-4 h-4" /></div>
-                  Staff Management
+                  {t("nav.staffManagement")}
                 </Link>
               </>
             )}
@@ -521,7 +540,7 @@ export default function DashboardLayout({
       {mobileProfileOpen && (
         <div className="md:hidden fixed bottom-[60px] left-0 right-0 bg-white border-t border-slate-200 rounded-t-2xl shadow-[0_-10px_40px_rgba(0,0,0,0.1)] z-40 overflow-hidden flex flex-col">
           <div className="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
-            <h3 className="font-semibold text-sm">Profile Account</h3>
+            <h3 className="font-semibold text-sm">{t("nav.profileAccount")}</h3>
             <button onClick={() => setMobileProfileOpen(false)}><X className="w-4 h-4 text-slate-400" /></button>
           </div>
           <div className="p-6 flex flex-col items-center">
@@ -529,12 +548,13 @@ export default function DashboardLayout({
               {currentUser?.name?.charAt(0)}
             </div>
             <h2 className="text-lg font-bold text-slate-800">{currentUser?.name}</h2>
-            <p className="text-sm text-slate-500 mb-6">{getRoleLabel(currentUser?.role ?? '')}</p>
-            
+            <p className="text-sm text-slate-500 mb-6">{roleLabel(currentUser?.role ?? '')}</p>
+
             <div className="w-full space-y-2">
+              <LanguageToggle className="w-full justify-center h-11" />
               <ChangePasswordDialog />
               <Button onClick={handleLogout} className="w-full bg-slate-900 text-white rounded-xl h-12 hover:bg-slate-800 transition-colors">
-                <LogOut className="w-4 h-4 mr-2" /> Log Out
+                <LogOut className="w-4 h-4 mr-2" /> {t("nav.logout")}
               </Button>
             </div>
           </div>
@@ -545,25 +565,25 @@ export default function DashboardLayout({
       {showNotifications && (
         <div className="md:hidden fixed bottom-[60px] left-0 right-0 bg-white border-t border-slate-200 rounded-t-2xl shadow-[0_-10px_40px_rgba(0,0,0,0.1)] z-40 max-h-[60vh] overflow-hidden flex flex-col">
           <div className="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
-            <h3 className="font-semibold text-sm">Notifications</h3>
+            <h3 className="font-semibold text-sm">{t("notif.title")}</h3>
             <button onClick={() => setShowNotifications(false)}><X className="w-4 h-4 text-slate-400" /></button>
           </div>
           <div className="overflow-y-auto p-2">
             {notifications?.length === 0 ? (
-              <div className="p-8 text-center text-sm text-zinc-500">No notifications</div>
+              <div className="p-8 text-center text-sm text-zinc-500">{t("notif.none")}</div>
             ) : (
               <div className="flex flex-col gap-2">
                 {notifications?.map((notif: any) => (
                   <div key={notif.id} className={`p-4 rounded-xl text-sm flex gap-3 ${notif.is_read ? 'opacity-60 bg-slate-50' : 'bg-indigo-50 border border-indigo-100'}`}>
                     <div className="flex-1">
                       <p className="text-slate-800">{notif.message}</p>
-                      <p className="text-xs text-slate-400 mt-2">{new Date(notif.created_at.endsWith("Z") || notif.created_at.includes("+") ? notif.created_at : notif.created_at + "Z").toLocaleString()}</p>
+                      <p className="text-xs text-slate-400 mt-2">{formatDhakaDateTime(notif.created_at)}</p>
                     </div>
                     {!notif.is_read && (
                       <button 
                         onClick={() => markReadMutation.mutate(notif.id)}
                         className="text-emerald-500 hover:text-emerald-600 transition-colors self-start mt-1 bg-white rounded-full p-1 shadow-sm"
-                        title="Mark as read"
+                        title={t("notif.markRead")}
                       >
                         <CheckCircle2 className="w-5 h-5" />
                       </button>

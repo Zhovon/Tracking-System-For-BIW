@@ -8,8 +8,10 @@ import { AlertCircle, KeyRound, Loader2 } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
 import { updateUser } from "@/lib/api";
+import { useT } from "@/lib/i18n";
 
 export function ChangePasswordDialog({ children }: { children?: React.ReactNode }) {
+  const t = useT();
   const [open, setOpen] = useState(false);
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -20,11 +22,11 @@ export function ChangePasswordDialog({ children }: { children?: React.ReactNode 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (password !== confirmPassword) {
-      setError("Passwords do not match");
+      setError(t("cpd.mismatch"));
       return;
     }
     if (password.length < 6) {
-      setError("Password must be at least 6 characters");
+      setError(t("cpd.tooShort"));
       return;
     }
 
@@ -41,7 +43,7 @@ export function ChangePasswordDialog({ children }: { children?: React.ReactNode 
       const { data: { session } } = await supabase.auth.getSession();
       const userId = session?.user?.id;
       if (!userId) {
-        throw new Error("Active session not found");
+        throw new Error(t("cpd.noSession"));
       }
 
       // 3. Call backend to update password & sync to Google Sheet
@@ -55,7 +57,7 @@ export function ChangePasswordDialog({ children }: { children?: React.ReactNode 
         setSuccess(false);
       }, 2000);
     } catch (err: any) {
-      setError(err.message || "An error occurred");
+      setError(err.message || t("cpd.genericError"));
     } finally {
       setLoading(false);
     }
@@ -76,7 +78,7 @@ export function ChangePasswordDialog({ children }: { children?: React.ReactNode 
           ) : (
             <Button variant="outline" className="w-full justify-start text-slate-600 hover:text-slate-900">
               <KeyRound className="w-4 h-4 mr-2" />
-              Change Password
+              {t("cpd.trigger")}
             </Button>
           )
         } 
@@ -84,9 +86,9 @@ export function ChangePasswordDialog({ children }: { children?: React.ReactNode 
       <DialogContent className="sm:max-w-[425px]">
         <form onSubmit={handleSubmit}>
           <DialogHeader>
-            <DialogTitle>Change Password</DialogTitle>
+            <DialogTitle>{t("cpd.title")}</DialogTitle>
             <DialogDescription>
-              Enter a new secure password for your account.
+              {t("cpd.desc")}
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
@@ -98,11 +100,11 @@ export function ChangePasswordDialog({ children }: { children?: React.ReactNode 
             )}
             {success && (
               <Alert className="bg-green-50 text-green-600 border-green-200">
-                <AlertDescription>Password updated successfully!</AlertDescription>
+                <AlertDescription>{t("cpd.success")}</AlertDescription>
               </Alert>
             )}
             <div className="grid gap-2">
-              <Label htmlFor="new-password">New Password</Label>
+              <Label htmlFor="new-password">{t("cpd.newPassword")}</Label>
               <Input
                 id="new-password"
                 type="password"
@@ -112,7 +114,7 @@ export function ChangePasswordDialog({ children }: { children?: React.ReactNode 
               />
             </div>
             <div className="grid gap-2">
-              <Label htmlFor="confirm-password">Confirm Password</Label>
+              <Label htmlFor="confirm-password">{t("cpd.confirmPassword")}</Label>
               <Input
                 id="confirm-password"
                 type="password"
@@ -124,11 +126,11 @@ export function ChangePasswordDialog({ children }: { children?: React.ReactNode 
           </div>
           <DialogFooter>
             <Button type="button" variant="ghost" onClick={() => setOpen(false)}>
-              Cancel
+              {t("common.cancel")}
             </Button>
             <Button type="submit" disabled={loading} className="bg-indigo-600 hover:bg-indigo-700">
               {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Save changes
+              {t("cpd.saveChanges")}
             </Button>
           </DialogFooter>
         </form>

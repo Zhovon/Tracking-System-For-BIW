@@ -12,8 +12,11 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 
 import { createTicket, fetchAllRooms, fetchRoomMembers, fetchCurrentUser, fetchTicketAssignees } from "@/lib/api";
+import { useT } from "@/lib/i18n";
+import { dhakaDatetimeLocalToUtc } from "@/lib/utils";
 
 export function CreateTicketDialog({ roomId }: { roomId?: string | null }) {
+  const t = useT();
   const [open, setOpen] = useState(false);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -76,34 +79,34 @@ export function CreateTicketDialog({ roomId }: { roomId?: string | null }) {
       priority,
       room_ids: [selectedRoomId],
       ...(assignedToId && assignedToId !== "none" && { assigned_to_id: assignedToId }),
-      ...(dueDate && { due_date: new Date(dueDate).toISOString() })
+      ...(dueDate && { due_date: dhakaDatetimeLocalToUtc(dueDate) })
     });
   };
 
   return (
     <>
-      <Button size="sm" onClick={() => setOpen(true)}>New Ticket</Button>
+      <Button size="sm" onClick={() => setOpen(true)}>{t("ctd.newTicket")}</Button>
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>Create New Ticket</DialogTitle>
+          <DialogTitle>{t("ctd.createNew")}</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4 mt-4">
           <div className="space-y-2">
-            <Label htmlFor="title">Title</Label>
+            <Label htmlFor="title">{t("ctd.title")}</Label>
             <Input
               id="title"
-              placeholder="Brief summary of the issue"
+              placeholder={t("ctd.titlePlaceholder")}
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               required
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="description">Description</Label>
+            <Label htmlFor="description">{t("tickets.description")}</Label>
             <Textarea
               id="description"
-              placeholder="Provide detailed context..."
+              placeholder={t("ctd.descPlaceholder")}
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               required
@@ -111,24 +114,24 @@ export function CreateTicketDialog({ roomId }: { roomId?: string | null }) {
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="priority">Priority</Label>
+            <Label htmlFor="priority">{t("tickets.priorityLabel")}</Label>
             <Select value={priority} onValueChange={(val) => setPriority(val || "low")}>
               <SelectTrigger>
-                <SelectValue placeholder="Select priority" />
+                <SelectValue placeholder={t("ctd.selectPriority")} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="low">Low</SelectItem>
-                <SelectItem value="medium">Medium</SelectItem>
-                <SelectItem value="high">High</SelectItem>
+                <SelectItem value="low">{t("ctd.priorityLow")}</SelectItem>
+                <SelectItem value="medium">{t("ctd.priorityMedium")}</SelectItem>
+                <SelectItem value="high">{t("ctd.priorityHigh")}</SelectItem>
               </SelectContent>
             </Select>
           </div>
           <div className="space-y-2">
-            <Label htmlFor="room">Room</Label>
+            <Label htmlFor="room">{t("ctd.room")}</Label>
             <Select value={selectedRoomId} onValueChange={(val) => { setSelectedRoomId(val || ""); setAssignedToId(""); }} required>
               <SelectTrigger>
-                <SelectValue placeholder="Select a room">
-                  {selectableRooms?.find((r: any) => r.id === selectedRoomId)?.name || "Select a room"}
+                <SelectValue placeholder={t("ctd.selectRoom")}>
+                  {selectableRooms?.find((r: any) => r.id === selectedRoomId)?.name || t("ctd.selectRoom")}
                 </SelectValue>
               </SelectTrigger>
               <SelectContent>
@@ -141,11 +144,11 @@ export function CreateTicketDialog({ roomId }: { roomId?: string | null }) {
           
           {isUniversalRoom ? (
             <div className="p-3 bg-indigo-50 border border-indigo-100 rounded-md text-sm text-indigo-800">
-              <span className="font-semibold">Notice Board:</span> Announcements in the Universal room are broadcast to all employees. No assignee required.
+              <span className="font-semibold">{t("ctd.noticeBoard")}</span> {t("ctd.noticeText")}
             </div>
           ) : (
             <div className="space-y-2">
-              <Label htmlFor="assignee">Assign To</Label>
+              <Label htmlFor="assignee">{t("ctd.assignTo")}</Label>
               <Popover open={assigneeOpen} onOpenChange={(open) => {
                 setAssigneeOpen(open);
                 if (!open) setAssigneeSearch("");
@@ -162,19 +165,19 @@ export function CreateTicketDialog({ roomId }: { roomId?: string | null }) {
                   }
                 >
                   {assignedToId && assignedToId !== "none"
-                    ? filteredUsers.find((u: any) => u.id === assignedToId)?.name 
-                    : (selectedRoomId ? "Select an assignee (Optional)" : "Select a room first")}
+                    ? filteredUsers.find((u: any) => u.id === assignedToId)?.name
+                    : (selectedRoomId ? t("ctd.selectAssigneeOptional") : t("ctd.selectRoomFirst"))}
                 </PopoverTrigger>
                 <PopoverContent className="w-[300px] p-0" align="start">
                   <Command shouldFilter={false}>
-                    <CommandInput 
-                      placeholder="Search assignee..." 
+                    <CommandInput
+                      placeholder={t("tickets.searchAssignee")}
                       value={assigneeSearch}
                       onValueChange={setAssigneeSearch}
                       className="h-9 text-xs"
                     />
                     <CommandList>
-                      <CommandEmpty>No staff found.</CommandEmpty>
+                      <CommandEmpty>{t("tickets.noStaff")}</CommandEmpty>
                       <CommandGroup>
                         <CommandItem
                           value="none"
@@ -184,7 +187,7 @@ export function CreateTicketDialog({ roomId }: { roomId?: string | null }) {
                           }}
                           className="text-xs"
                         >
-                          Unassigned
+                          {t("tickets.unassigned")}
                         </CommandItem>
                         {currentUser && (
                           <CommandItem
@@ -195,7 +198,7 @@ export function CreateTicketDialog({ roomId }: { roomId?: string | null }) {
                             }}
                             className="text-xs font-medium text-indigo-600 bg-indigo-50/50"
                           >
-                            Assign to me
+                            {t("ctd.assignToMe")}
                           </CommandItem>
                         )}
                         {(() => {
@@ -231,7 +234,7 @@ export function CreateTicketDialog({ roomId }: { roomId?: string | null }) {
           )}
 
           <div className="space-y-2">
-            <Label htmlFor="due_date">Deadline (Optional)</Label>
+            <Label htmlFor="due_date">{t("ctd.deadlineOptional")}</Label>
             <Input
               id="due_date"
               type="datetime-local"
@@ -245,7 +248,7 @@ export function CreateTicketDialog({ roomId }: { roomId?: string | null }) {
               type="submit"
               disabled={createTicketMutation.isPending}
             >
-              {createTicketMutation.isPending ? "Creating..." : "Submit Ticket"}
+              {createTicketMutation.isPending ? t("ctd.creating") : t("ctd.submit")}
             </Button>
           </div>
         </form>

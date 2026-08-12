@@ -10,8 +10,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { AlertCircle, Loader2, CheckCircle2 } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Label } from "@/components/ui/label";
+import { useT } from "@/lib/i18n";
+import { LanguageToggle } from "@/components/LanguageToggle";
 
 export default function ResetPasswordPage() {
+  const t = useT();
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -44,11 +47,11 @@ export default function ResetPasswordPage() {
   const handleResetPassword = async (e: React.FormEvent) => {
     e.preventDefault();
     if (password !== confirmPassword) {
-      setError("Passwords do not match");
+      setError(t("reset.mismatch"));
       return;
     }
     if (password.length < 6) {
-      setError("Password must be at least 6 characters");
+      setError(t("reset.tooShort"));
       return;
     }
 
@@ -79,18 +82,21 @@ export default function ResetPasswordPage() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-indigo-50 p-4">
+      <div className="absolute top-4 right-4">
+        <LanguageToggle />
+      </div>
       <div className="w-full max-w-md">
         <div className="text-center mb-8 flex flex-col items-center">
           <Image src="/logo.jpeg" alt="BIW OS Logo" width={64} height={64} className="rounded-xl mb-4 shadow-sm object-cover" />
           <h1 className="text-3xl font-bold tracking-tight text-indigo-900 mb-2">BIW OS</h1>
-          <p className="text-slate-600">Secure your account</p>
+          <p className="text-slate-600">{t("reset.secure")}</p>
         </div>
 
         <Card className="bg-white border-slate-200 shadow-xl overflow-hidden">
           <CardHeader>
-            <CardTitle className="text-xl text-slate-900">Set New Password</CardTitle>
+            <CardTitle className="text-xl text-slate-900">{t("reset.title")}</CardTitle>
             <CardDescription className="text-slate-500">
-              Please enter a new, secure password for your account.
+              {t("reset.desc")}
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -98,7 +104,7 @@ export default function ResetPasswordPage() {
               <Alert className="bg-emerald-50 text-emerald-700 border-emerald-200">
                 <CheckCircle2 className="h-4 w-4" />
                 <AlertDescription>
-                  Password successfully updated! Redirecting to dashboard...
+                  {t("reset.success")}
                 </AlertDescription>
               </Alert>
             ) : (
@@ -111,7 +117,7 @@ export default function ResetPasswordPage() {
                 )}
                 
                 <div className="space-y-2">
-                  <Label htmlFor="new-password">New Password</Label>
+                  <Label htmlFor="new-password">{t("reset.newPassword")}</Label>
                   <Input
                     id="new-password"
                     type="password"
@@ -124,7 +130,7 @@ export default function ResetPasswordPage() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="confirm-password">Confirm New Password</Label>
+                  <Label htmlFor="confirm-password">{t("reset.confirmPassword")}</Label>
                   <Input
                     id="confirm-password"
                     type="password"
@@ -144,10 +150,10 @@ export default function ResetPasswordPage() {
                   {loading ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Updating...
+                      {t("reset.updating")}
                     </>
                   ) : (
-                    "Update Password"
+                    t("reset.updatePassword")
                   )}
                 </Button>
               </form>

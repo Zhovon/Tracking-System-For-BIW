@@ -25,34 +25,16 @@ import { CreateTicketDialog } from "@/components/CreateTicketDialog";
 import { supabase } from "@/lib/supabase";
 import { getSlug } from "./layout";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useT } from "@/lib/i18n";
+import { formatDhakaDateTime, formatDhakaShortDate, toDhakaDatetimeLocal, dhakaDatetimeLocalToUtc } from "@/lib/utils";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1";
 
-function toLocalDatetimeValue(utcDate: string): string {
-  const d = new Date(utcDate);
-  return (
-    [
-      d.getFullYear(),
-      String(d.getMonth() + 1).padStart(2, "0"),
-      String(d.getDate()).padStart(2, "0"),
-    ].join("-") +
-    "T" +
-    [
-      String(d.getHours()).padStart(2, "0"),
-      String(d.getMinutes()).padStart(2, "0"),
-    ].join(":")
-  );
-}
+// Dhaka wall-clock value for the datetime-local due-date input.
+const toLocalDatetimeValue = toDhakaDatetimeLocal;
 
-function formatDateTime(dateStr: string): string {
-  return new Date(dateStr).toLocaleString("en-GB", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-}
+// All displayed timestamps are rendered in Asia/Dhaka.
+const formatDateTime = formatDhakaDateTime;
 
 function PropLabel({ children }: { children: React.ReactNode }) {
   return (
@@ -65,6 +47,9 @@ function PropLabel({ children }: { children: React.ReactNode }) {
 function DashboardContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
+  const t = useT();
+  const statusLabel = (s: string) => t(`status.${s}`);
+  const priorityLabel = (p: string) => t(`priority.${p}`);
 
   const roomSlug = searchParams.get("room");
   const roomFallbackId = searchParams.get("room_id");
@@ -176,7 +161,7 @@ function DashboardContent() {
         headers,
       });
       if (!res.ok) {
-        let errMessage = "Failed to download attachment";
+        let errMessage = t("tickets.downloadFailed");
         try {
           const errData = await res.json();
           errMessage = errData.detail || errMessage;
@@ -195,7 +180,7 @@ function DashboardContent() {
       window.URL.revokeObjectURL(url);
     } catch (err) {
       console.error(err);
-      alert("An error occurred during file download");
+      alert(t("tickets.downloadError"));
     }
   };
 
@@ -257,7 +242,7 @@ function DashboardContent() {
       : "";
     if (dueDate !== currentVal) {
       updateTicketMutation.mutate({
-        due_date: dueDate ? new Date(dueDate).toISOString() : null,
+        due_date: dueDate ? dhakaDatetimeLocalToUtc(dueDate) : null,
       });
     }
   };
@@ -287,7 +272,7 @@ function DashboardContent() {
 
   const roomName = roomId
     ? allRooms?.find((r: any) => r.id === roomId)?.name
-    : "All Tickets";
+    : t("nav.allTickets");
 
   // ── SHARED PROPERTIES PANEL CONTENT ─────────────────────────────────────
   const PropertiesContent = () => (
@@ -296,21 +281,21 @@ function DashboardContent() {
       {/* Status + Priority — side by side on mobile */}
       <div className="grid grid-cols-2 md:grid-cols-1 gap-4">
         <div>
-          <PropLabel>Status</PropLabel>
+          <PropLabel>{t("tickets.statusLabel")}</PropLabel>
           <Badge
             className={`text-[10px] uppercase tracking-widest font-bold border px-2 py-0.5 ${getStatusColor(selectedTicket!.status)}`}
           >
-            {selectedTicket!.status.replace("_", " ")}
+            {statusLabel(selectedTicket!.status)}
           </Badge>
           {selectedTicket!.approval_status === "pending" && (
             <Badge className="mt-1 block w-fit text-[10px] uppercase tracking-widest font-bold bg-amber-50 text-amber-700 border border-amber-200 px-2 py-0.5">
-              Pending
+              {t("tickets.pending")}
             </Badge>
           )}
         </div>
 
         <div>
-          <PropLabel>Priority</PropLabel>
+          <PropLabel>{t("tickets.priorityLabel")}</PropLabel>
           <Select
             value={selectedTicket!.priority}
             onValueChange={(val) => updateTicketMutation.mutate({ priority: val })}
@@ -319,13 +304,13 @@ function DashboardContent() {
             <SelectTrigger className="h-8 w-full border-slate-200 text-xs bg-slate-50 hover:bg-slate-100">
               <div className="flex items-center gap-1.5">
                 <div className={`w-2 h-2 rounded-full ${getPriorityDot(selectedTicket!.priority)}`} />
-                <span className="capitalize">{selectedTicket!.priority}</span>
+                <span className="capitalize">{priorityLabel(selectedTicket!.priority)}</span>
               </div>
             </SelectTrigger>
             <SelectContent>
               {["low", "medium", "high"].map((p) => (
                 <SelectItem key={p} value={p} className="text-xs capitalize">
-                  {p.charAt(0).toUpperCase() + p.slice(1)}
+                  {priorityLabel(p)}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -336,7 +321,7 @@ function DashboardContent() {
       {/* Assignee */}
       {!isSelectedTicketUniversal && (
         <div>
-          <PropLabel>Assignee</PropLabel>
+          <PropLabel>{t("tickets.assignee")}</PropLabel>
           <Popover open={assigneeOpen} onOpenChange={(open) => {
             setAssigneeOpen(open);
             if (!open) setAssigneeSearch("");
@@ -359,20 +344,20 @@ function DashboardContent() {
                     : "?"}
                 </div>
                 <span className="truncate text-xs">
-                  {resolvedAssigneeName || "Unassigned"}
+                  {resolvedAssigneeName || t("tickets.unassigned")}
                 </span>
               </div>
             </PopoverTrigger>
             <PopoverContent className="w-[250px] p-0" align="start">
               <Command shouldFilter={false}>
-                <CommandInput 
-                  placeholder="Search assignee..." 
+                <CommandInput
+                  placeholder={t("tickets.searchAssignee")}
                   value={assigneeSearch}
                   onValueChange={setAssigneeSearch}
                   className="h-9 text-xs"
                 />
                 <CommandList>
-                  <CommandEmpty>No staff found</CommandEmpty>
+                  <CommandEmpty>{t("tickets.noStaff")}</CommandEmpty>
                   <CommandGroup>
                     <CommandItem
                       value="unassigned"
@@ -382,7 +367,7 @@ function DashboardContent() {
                       }}
                       className="text-xs"
                     >
-                      Unassigned
+                      {t("tickets.unassigned")}
                     </CommandItem>
                     {(() => {
                       const options = ticketRoomMembers ? [...ticketRoomMembers] : [];
@@ -423,7 +408,7 @@ function DashboardContent() {
 
       {/* Due Date */}
       <div>
-        <PropLabel>Due Date</PropLabel>
+        <PropLabel>{t("tickets.dueDate")}</PropLabel>
         <Input
           type="datetime-local"
           className="h-8 border-slate-200 text-xs bg-slate-50 hover:bg-slate-100"
@@ -433,7 +418,7 @@ function DashboardContent() {
         />
         {isOverdue && (
           <p className="text-[10px] text-red-500 mt-1 font-bold uppercase tracking-wider">
-            Overdue
+            {t("tickets.overdue")}
           </p>
         )}
       </div>
@@ -442,7 +427,7 @@ function DashboardContent() {
 
       {/* Rooms */}
       <div>
-        <PropLabel>Rooms</PropLabel>
+        <PropLabel>{t("tickets.rooms")}</PropLabel>
         <div className="flex flex-wrap gap-1">
           {selectedTicket!.rooms?.length > 0 ? (
             selectedTicket!.rooms.map((room: any) => (
@@ -455,7 +440,7 @@ function DashboardContent() {
               </Badge>
             ))
           ) : (
-            <span className="text-xs text-slate-400">None</span>
+            <span className="text-xs text-slate-400">{t("tickets.none")}</span>
           )}
         </div>
       </div>
@@ -463,7 +448,7 @@ function DashboardContent() {
       {/* Escalate */}
       {!isSelectedTicketUniversal && (
         <div>
-          <PropLabel>Escalate To</PropLabel>
+          <PropLabel>{t("tickets.escalateTo")}</PropLabel>
           <Select
             value=""
             onValueChange={(val) => {
@@ -472,7 +457,7 @@ function DashboardContent() {
             disabled={updateTicketMutation.isPending || selectedTicket!.status === "resolved"}
           >
             <SelectTrigger className="h-8 w-full border-slate-200 text-xs bg-slate-50 hover:bg-slate-100">
-              <SelectValue placeholder="Select room..." />
+              <SelectValue placeholder={t("tickets.selectRoom")} />
             </SelectTrigger>
             <SelectContent>
               {allRooms
@@ -492,7 +477,7 @@ function DashboardContent() {
       {/* Created By + Opened — side by side on mobile */}
       <div className="grid grid-cols-2 md:grid-cols-1 gap-4">
         <div>
-          <PropLabel>Created By</PropLabel>
+          <PropLabel>{t("tickets.createdBy")}</PropLabel>
           <div className="flex items-center gap-2 mt-0.5">
             <div className="w-7 h-7 rounded-full bg-slate-200 text-slate-700 text-xs font-bold flex items-center justify-center shrink-0">
               {selectedTicket!.creator?.name?.charAt(0)}
@@ -511,7 +496,7 @@ function DashboardContent() {
         </div>
 
         <div>
-          <PropLabel>Created</PropLabel>
+          <PropLabel>{t("tickets.created")}</PropLabel>
           <p className="text-xs text-slate-600 leading-relaxed">
             {formatDateTime(selectedTicket!.created_at)}
           </p>
@@ -545,7 +530,7 @@ function DashboardContent() {
           <div className="relative">
             <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
             <Input
-              placeholder="Search by Staff ID or Name"
+              placeholder={t("tickets.searchByStaff")}
               value={filterStaffId}
               onChange={(e) => setFilterStaffId(e.target.value)}
               className="pl-8 h-8 bg-white text-sm border-slate-200"
@@ -562,7 +547,7 @@ function DashboardContent() {
                     : "text-slate-500 hover:text-slate-700"
                 }`}
               >
-                {f}
+                {f === "active" ? t("tickets.filterActive") : t("tickets.filterResolved")}
               </button>
             ))}
           </div>
@@ -587,9 +572,9 @@ function DashboardContent() {
               ))}
             </div>
           ) : error ? (
-            <p className="p-4 text-center text-red-500 text-xs">Failed to load tickets.</p>
+            <p className="p-4 text-center text-red-500 text-xs">{t("tickets.failedLoad")}</p>
           ) : tickets.length === 0 ? (
-            <p className="p-8 text-center text-slate-400 text-sm">No tickets found.</p>
+            <p className="p-8 text-center text-slate-400 text-sm">{t("tickets.noneFound")}</p>
           ) : (
             <div className="divide-y divide-slate-100">
               {tickets.map((ticket: any) => {
@@ -614,13 +599,13 @@ function DashboardContent() {
                       className={`text-[10px] font-bold uppercase tracking-wider flex items-center gap-1 ${getPriorityTextColor(ticket.priority)}`}
                     >
                       <span className={`w-1.5 h-1.5 rounded-full ${getPriorityDot(ticket.priority)}`} />
-                      {ticket.priority}
+                      {priorityLabel(ticket.priority)}
                     </span>
                     <Badge
                       variant="secondary"
                       className={`text-[10px] uppercase font-bold border-none px-1.5 py-0.5 ${getStatusColor(ticket.status)}`}
                     >
-                      {ticket.status.replace("_", " ")}
+                      {statusLabel(ticket.status)}
                     </Badge>
                   </div>
                   <h3 className="font-medium text-slate-900 text-sm leading-snug line-clamp-2 mb-2">
@@ -629,10 +614,7 @@ function DashboardContent() {
                   <div className="flex items-center justify-between">
                     <span className="text-xs text-slate-400 truncate">{ticket.creator.name}</span>
                     <span className="text-xs text-slate-400 shrink-0 ml-2">
-                      {new Date(ticket.created_at).toLocaleDateString("en-GB", {
-                        day: "2-digit",
-                        month: "short",
-                      })}
+                      {formatDhakaShortDate(ticket.created_at)}
                     </span>
                   </div>
                 </Link>
@@ -698,7 +680,7 @@ function DashboardContent() {
           ) : ticketError ? (
             <div className="flex-1 flex flex-col items-center justify-center text-center p-8">
               <AlertCircle className="w-10 h-10 text-red-400 mb-3" />
-              <p className="font-semibold text-slate-800">Failed to load ticket</p>
+              <p className="font-semibold text-slate-800">{t("tickets.failedTicket")}</p>
               <p className="text-sm text-slate-500 mt-1">{(ticketError as Error).message}</p>
             </div>
           ) : selectedTicket ? (
@@ -713,7 +695,7 @@ function DashboardContent() {
                   onClick={goBack}
                 >
                   <ArrowLeft className="w-3.5 h-3.5 mr-1" />
-                  Back
+                  {t("tickets.back")}
                 </Button>
 
                 <div className="flex items-start gap-2 justify-between">
@@ -722,16 +704,16 @@ function DashboardContent() {
                       <Badge
                         className={`text-[10px] uppercase tracking-widest font-bold border px-2 py-0.5 ${getStatusColor(selectedTicket.status)}`}
                       >
-                        {selectedTicket.status.replace("_", " ")}
+                        {statusLabel(selectedTicket.status)}
                       </Badge>
                       {selectedTicket.approval_status === "pending" && (
                         <Badge className="text-[10px] uppercase tracking-widest font-bold bg-amber-50 text-amber-700 border border-amber-200 px-2 py-0.5">
-                          Pending
+                          {t("tickets.pending")}
                         </Badge>
                       )}
                       {isOverdue && (
                         <Badge className="text-[10px] uppercase tracking-widest font-bold bg-red-50 text-red-600 border border-red-200 px-2 py-0.5 animate-pulse">
-                          Overdue
+                          {t("tickets.overdue")}
                         </Badge>
                       )}
                     </div>
@@ -751,7 +733,7 @@ function DashboardContent() {
                           disabled={approveTicketMutation.isPending}
                         >
                           <CheckCircle2 className="w-3.5 h-3.5 mr-1 md:mr-1.5" />
-                          <span className="hidden sm:inline">Approve</span>
+                          <span className="hidden sm:inline">{t("tickets.approve")}</span>
                         </Button>
                       )}
                     {!isSelectedTicketUniversal && (
@@ -764,7 +746,7 @@ function DashboardContent() {
                           disabled={updateTicketMutation.isPending}
                         >
                           <CheckCircle2 className="w-3.5 h-3.5 mr-1 md:mr-1.5" />
-                          <span className="hidden sm:inline">Resolve</span>
+                          <span className="hidden sm:inline">{t("tickets.resolve")}</span>
                         </Button>
                       ) : (
                         <Button
@@ -775,7 +757,7 @@ function DashboardContent() {
                           disabled={updateTicketMutation.isPending}
                         >
                           <RotateCcw className="w-3.5 h-3.5 mr-1 md:mr-1.5" />
-                          <span className="hidden sm:inline">Re-open</span>
+                          <span className="hidden sm:inline">{t("tickets.reopen")}</span>
                         </Button>
                       )
                     )}
@@ -795,7 +777,7 @@ function DashboardContent() {
                         : "border-transparent text-slate-500 hover:text-slate-700"
                     }`}
                   >
-                    {tab}
+                    {tab === "activity" ? t("tickets.tabActivity") : t("tickets.tabDetails")}
                   </button>
                 ))}
               </div>
@@ -811,7 +793,7 @@ function DashboardContent() {
                 >
                   {/* Description */}
                   <div className="bg-[#f7f6f3] border-b border-slate-200 px-4 md:px-5 py-4 flex-shrink-0">
-                    <PropLabel>Description</PropLabel>
+                    <PropLabel>{t("tickets.description")}</PropLabel>
                     <p className="text-sm text-slate-700 leading-relaxed whitespace-pre-wrap">
                       {selectedTicket.description}
                     </p>
@@ -822,7 +804,7 @@ function DashboardContent() {
                     <PropLabel>
                       <span className="flex items-center gap-1.5">
                         <Activity className="w-3 h-3" />
-                        Activity
+                        {t("tickets.activity")}
                       </span>
                     </PropLabel>
 
@@ -838,7 +820,7 @@ function DashboardContent() {
                           <span className="font-semibold text-slate-700">
                             {selectedTicket.creator?.name}
                           </span>{" "}
-                          created this ticket
+                          {t("tickets.createdThis")}
                         </span>
                         <span className="text-[10px] text-slate-400 ml-auto shrink-0 hidden sm:block">
                           {formatDateTime(selectedTicket.created_at)}
@@ -911,13 +893,13 @@ function DashboardContent() {
                       })}
 
                       {selectedTicket.messages?.length === 0 && (
-                        <p className="text-xs text-slate-400 py-4">No activity yet.</p>
+                        <p className="text-xs text-slate-400 py-4">{t("tickets.noActivity")}</p>
                       )}
                     </div>
 
                     {/* Add Comment */}
                     <div className="bg-white rounded-lg border border-slate-200 shadow-sm p-3 md:p-4 mt-4">
-                      <PropLabel>Add Comment</PropLabel>
+                      <PropLabel>{t("tickets.addComment")}</PropLabel>
                       {selectedFile && (
                         <div className="mb-2">
                           <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-slate-50 border border-slate-200 rounded text-xs text-slate-600">
@@ -930,7 +912,7 @@ function DashboardContent() {
                         </div>
                       )}
                       <Textarea
-                        placeholder="Write a comment..."
+                        placeholder={t("tickets.writeComment")}
                         className="min-h-[80px] border-slate-200 text-sm resize-none focus-visible:ring-1 focus-visible:ring-slate-300"
                         value={comment}
                         onChange={(e) => setComment(e.target.value)}
@@ -963,10 +945,10 @@ function DashboardContent() {
                           {postMessageMutation.isPending ? (
                             <>
                               <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
-                              Responding…
+                              {t("tickets.responding")}
                             </>
                           ) : (
-                            "Respond"
+                            t("tickets.respond")
                           )}
                         </Button>
                       </div>
@@ -992,9 +974,9 @@ function DashboardContent() {
       ) : (
         <div className="hidden md:flex flex-1 flex-col items-center justify-center bg-slate-50/30">
           <Ticket className="w-14 h-14 mb-4 text-slate-200" />
-          <p className="text-base font-medium text-slate-500">Select a ticket to view details</p>
+          <p className="text-base font-medium text-slate-500">{t("tickets.selectToView")}</p>
           <p className="text-sm text-slate-400 mt-1 max-w-xs text-center">
-            Click any ticket to see its full details and activity log.
+            {t("tickets.selectHint")}
           </p>
         </div>
       )}
