@@ -9,8 +9,11 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { AlertCircle, Loader2, ArrowLeft, CheckCircle2 } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { useT } from "@/lib/i18n";
+import { LanguageToggle } from "@/components/LanguageToggle";
 
 export default function LoginPage() {
+  const t = useT();
   const [view, setView] = useState<"login" | "forgot_password">("login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -62,12 +65,15 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-indigo-50 p-4">
+      <div className="absolute top-4 right-4">
+        <LanguageToggle />
+      </div>
       <div className="w-full max-w-md">
         <div className="text-center mb-8 flex flex-col items-center">
           <Image src="/logo.jpeg" alt="BIW OS Logo" width={64} height={64} className="rounded-xl mb-4 shadow-sm object-cover" />
           <h1 className="text-3xl font-bold tracking-tight text-indigo-900 mb-2">BIW OS</h1>
           <p className="text-slate-600">
-            {view === "login" ? "Sign in to manage your system" : "Reset your password"}
+            {view === "login" ? t("login.subtitleLogin") : t("login.subtitleReset")}
           </p>
         </div>
 
@@ -75,8 +81,8 @@ export default function LoginPage() {
           {view === "login" ? (
             <div className="animate-in fade-in slide-in-from-bottom-4 duration-300">
               <CardHeader>
-                <CardTitle className="text-xl text-slate-900">Welcome back</CardTitle>
-                <CardDescription className="text-slate-500">Enter your credentials to access the system.</CardDescription>
+                <CardTitle className="text-xl text-slate-900">{t("login.welcomeBack")}</CardTitle>
+                <CardDescription className="text-slate-500">{t("login.welcomeDesc")}</CardDescription>
               </CardHeader>
               <CardContent>
                 <form onSubmit={handleLogin} className="space-y-4">
@@ -88,7 +94,7 @@ export default function LoginPage() {
                   )}
                   
                   <div className="space-y-2">
-                    <label className="text-sm font-medium text-slate-700">Email address</label>
+                    <label className="text-sm font-medium text-slate-700">{t("login.emailLabel")}</label>
                     <Input
                       type="email"
                       required
@@ -102,13 +108,13 @@ export default function LoginPage() {
 
                   <div className="space-y-2">
                     <div className="flex items-center justify-between">
-                      <label className="text-sm font-medium text-slate-700">Password</label>
-                      <button 
-                        type="button" 
+                      <label className="text-sm font-medium text-slate-700">{t("login.passwordLabel")}</label>
+                      <button
+                        type="button"
                         onClick={() => { setView("forgot_password"); setError(null); setResetSent(false); }}
                         className="text-xs text-indigo-600 hover:text-indigo-800 font-medium"
                       >
-                        Forgot password?
+                        {t("login.forgot")}
                       </button>
                     </div>
                     <Input
@@ -130,10 +136,10 @@ export default function LoginPage() {
                     {loading ? (
                       <>
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Signing in...
+                        {t("login.signingIn")}
                       </>
                     ) : (
-                      "Sign in"
+                      t("login.signIn")
                     )}
                   </Button>
                 </form>
@@ -149,11 +155,11 @@ export default function LoginPage() {
                   onClick={() => { setView("login"); setError(null); }}
                 >
                   <ArrowLeft className="w-4 h-4 mr-2" />
-                  Back to login
+                  {t("login.backToLogin")}
                 </Button>
-                <CardTitle className="text-xl text-slate-900">Forgot Password</CardTitle>
+                <CardTitle className="text-xl text-slate-900">{t("login.forgotTitle")}</CardTitle>
                 <CardDescription className="text-slate-500">
-                  Enter your email address and we&apos;ll send you a link to reset your password.
+                  {t("login.forgotDesc")}
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -161,7 +167,7 @@ export default function LoginPage() {
                   <Alert className="bg-emerald-50 text-emerald-700 border-emerald-200 mb-4">
                     <CheckCircle2 className="h-4 w-4" />
                     <AlertDescription>
-                      If an account exists with that email, a password reset link has been sent. Please check your inbox.
+                      {t("login.resetSent")}
                     </AlertDescription>
                   </Alert>
                 ) : (
@@ -174,7 +180,7 @@ export default function LoginPage() {
                     )}
                     
                     <div className="space-y-2">
-                      <label className="text-sm font-medium text-slate-700">Email address</label>
+                      <label className="text-sm font-medium text-slate-700">{t("login.emailLabel")}</label>
                       <Input
                         type="email"
                         required
@@ -193,10 +199,10 @@ export default function LoginPage() {
                       {loading ? (
                         <>
                           <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          Sending link...
+                          {t("login.sendingLink")}
                         </>
                       ) : (
-                        "Send reset link"
+                        t("login.sendResetLink")
                       )}
                     </Button>
                   </form>
@@ -206,7 +212,7 @@ export default function LoginPage() {
           )}
         </Card>
         <p className="text-center text-sm text-slate-500 mt-8">
-          Don&apos;t have an account? Contact your BIW owner to request access.
+          {t("login.noAccount")}
         </p>
       </div>
     </div>

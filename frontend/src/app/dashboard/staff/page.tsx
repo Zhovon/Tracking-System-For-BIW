@@ -2,7 +2,8 @@
 
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { getRoleLabel } from "@/app/dashboard/layout";
+import { useRoleLabel } from "@/app/dashboard/layout";
+import { useT } from "@/lib/i18n";
 import { createUser, updateUser, deleteUser, fetchAllRooms, fetchAllUsers, createRoom, fetchCurrentUser } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,6 +15,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 
 export default function StaffManagementPage() {
   const queryClient = useQueryClient();
+  const t = useT();
+  const roleLabel = useRoleLabel();
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -152,13 +155,13 @@ export default function StaffManagementPage() {
           <div>
           <h1 className="text-3xl font-bold text-slate-900 flex items-center gap-2">
             <UserPlus className="h-8 w-8 text-indigo-500" />
-            Staff Management
+            {t("nav.staffManagement")}
           </h1>
-          <p className="text-slate-500 mt-2">Provision new employee accounts and assign them to branches.</p>
+          <p className="text-slate-500 mt-2">{t("staff.subtitle")}</p>
           <Alert className="mt-4 bg-amber-500/10 border-amber-500/20 text-amber-500">
             <ShieldAlert className="h-4 w-4" />
             <AlertDescription>
-              This area is highly restricted. Only Owners can create new staff accounts. Accounts created here bypass email verification and are active immediately.
+              {t("staff.restrictedNote")}
             </AlertDescription>
           </Alert>
         </div>
@@ -168,8 +171,8 @@ export default function StaffManagementPage() {
           <div className="lg:col-span-1 space-y-8 flex flex-col">
             <Card className="bg-white border-slate-200 shadow-sm">
               <CardHeader>
-                <CardTitle className="text-xl text-slate-900">Create Account</CardTitle>
-                <CardDescription className="text-slate-500">Fill out the details for the new staff member.</CardDescription>
+                <CardTitle className="text-xl text-slate-900">{t("staff.createAccount")}</CardTitle>
+                <CardDescription className="text-slate-500">{t("staff.createAccountDesc")}</CardDescription>
               </CardHeader>
               <CardContent>
                 <form onSubmit={handleSubmit} className="space-y-4">
@@ -182,64 +185,64 @@ export default function StaffManagementPage() {
                   {success && (
                     <Alert className="bg-green-500/10 border-green-500/20 text-green-400 p-3">
                       <CheckCircle2 className="h-4 w-4" />
-                      <AlertDescription className="text-xs">User successfully created.</AlertDescription>
+                      <AlertDescription className="text-xs">{t("staff.userCreated")}</AlertDescription>
                     </Alert>
                   )}
 
                   <div className="space-y-2">
-                    <label className="text-xs font-medium text-slate-700">Full Name</label>
-                    <Input required placeholder="Jane Doe" value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} className="bg-slate-50 border-slate-200 text-slate-900" />
+                    <label className="text-xs font-medium text-slate-700">{t("staff.fullName")}</label>
+                    <Input required placeholder={t("staff.phName")} value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} className="bg-slate-50 border-slate-200 text-slate-900" />
                   </div>
 
                   <div className="space-y-2">
-                    <label className="text-xs font-medium text-slate-700">Email Address</label>
-                    <Input type="email" required placeholder="jane@biw.com" value={formData.email} onChange={(e) => setFormData({...formData, email: e.target.value})} className="bg-slate-50 border-slate-200 text-slate-900" />
+                    <label className="text-xs font-medium text-slate-700">{t("staff.emailAddress")}</label>
+                    <Input type="email" required placeholder={t("staff.phEmail")} value={formData.email} onChange={(e) => setFormData({...formData, email: e.target.value})} className="bg-slate-50 border-slate-200 text-slate-900" />
                   </div>
 
                   <div className="space-y-2">
-                    <label className="text-xs font-medium text-slate-700">Temporary Password</label>
-                    <Input type="text" required placeholder="password123" value={formData.password} onChange={(e) => setFormData({...formData, password: e.target.value})} className="bg-slate-50 border-slate-200 text-slate-900" />
+                    <label className="text-xs font-medium text-slate-700">{t("staff.tempPassword")}</label>
+                    <Input type="text" required placeholder={t("staff.phPassword")} value={formData.password} onChange={(e) => setFormData({...formData, password: e.target.value})} className="bg-slate-50 border-slate-200 text-slate-900" />
                   </div>
 
                   <div className="space-y-2">
-                    <label className="text-xs font-medium text-slate-700">Role</label>
+                    <label className="text-xs font-medium text-slate-700">{t("staff.role")}</label>
                     <Select value={formData.role} onValueChange={(val) => setFormData({...formData, role: val || "therapist"})}>
                       <SelectTrigger className="bg-slate-50 border-slate-200 text-slate-900">
-                        <SelectValue placeholder="Select role" />
+                        <SelectValue placeholder={t("staff.selectRole")} />
                       </SelectTrigger>
                       <SelectContent className="bg-white border-slate-200 text-slate-900">
-                        <SelectItem value="therapist">Therapist</SelectItem>
+                        <SelectItem value="therapist">{t("role.therapist")}</SelectItem>
                         {currentUserRole === "owner" && (
                           <>
-                            <SelectItem value="manager">Branch Manager</SelectItem>
-                            <SelectItem value="hr">HR</SelectItem>
-                            <SelectItem value="executive">Executive</SelectItem>
-                            <SelectItem value="head_of_business">Head of Business Service &amp; Relationship</SelectItem>
+                            <SelectItem value="manager">{t("role.manager")}</SelectItem>
+                            <SelectItem value="hr">{t("role.hr")}</SelectItem>
+                            <SelectItem value="executive">{t("role.executive")}</SelectItem>
+                            <SelectItem value="head_of_business">{t("role.head_of_business")}</SelectItem>
                           </>
                         )}
-                        <SelectItem value="it_team">IT Support</SelectItem>
-                        <SelectItem value="cleaner">Cleaner</SelectItem>
+                        <SelectItem value="it_team">{t("role.it_team")}</SelectItem>
+                        <SelectItem value="cleaner">{t("role.cleaner")}</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
 
                   <div className="space-y-2">
-                    <label className="text-xs font-medium text-slate-700">Phone Number</label>
-                    <Input placeholder="e.g. 017XXXXXXXX" value={formData.phone} onChange={(e) => setFormData({...formData, phone: e.target.value})} className="bg-slate-50 border-slate-200 text-slate-900" />
+                    <label className="text-xs font-medium text-slate-700">{t("staff.phone")}</label>
+                    <Input placeholder={t("staff.phPhone")} value={formData.phone} onChange={(e) => setFormData({...formData, phone: e.target.value})} className="bg-slate-50 border-slate-200 text-slate-900" />
                   </div>
 
                   <div className="space-y-2">
-                    <label className="text-xs font-medium text-slate-700">NID / Birth Certificate Number</label>
-                    <Input placeholder="e.g. 2864914250" value={formData.nid} onChange={(e) => setFormData({...formData, nid: e.target.value})} className="bg-slate-50 border-slate-200 text-slate-900" />
+                    <label className="text-xs font-medium text-slate-700">{t("staff.nid")}</label>
+                    <Input placeholder={t("staff.phNid")} value={formData.nid} onChange={(e) => setFormData({...formData, nid: e.target.value})} className="bg-slate-50 border-slate-200 text-slate-900" />
                   </div>
 
                   <div className="space-y-2">
-                    <label className="text-xs font-medium text-slate-700">Joining Date</label>
-                    <Input placeholder="e.g. 20 August 2024" value={formData.joining_date} onChange={(e) => setFormData({...formData, joining_date: e.target.value})} className="bg-slate-50 border-slate-200 text-slate-900" />
+                    <label className="text-xs font-medium text-slate-700">{t("staff.joiningDate")}</label>
+                    <Input placeholder={t("staff.phJoining")} value={formData.joining_date} onChange={(e) => setFormData({...formData, joining_date: e.target.value})} className="bg-slate-50 border-slate-200 text-slate-900" />
                   </div>
 
                   <div className="space-y-2">
-                    <label className="text-xs font-medium text-slate-700">Initial Branch(es) / Department(s)</label>
+                    <label className="text-xs font-medium text-slate-700">{t("staff.initialBranches")}</label>
                     <div className="border border-slate-200 bg-slate-50 rounded-md p-3 max-h-48 overflow-y-auto space-y-2">
                       {selectableRooms?.map((r: any) => (
                         <label key={r.id} className="flex items-center gap-2 cursor-pointer text-sm text-slate-700">
@@ -257,13 +260,13 @@ export default function StaffManagementPage() {
                           {r.name} ({r.type})
                         </label>
                       ))}
-                      {(!selectableRooms || selectableRooms.length === 0) && <p className="text-xs text-slate-500">No rooms available.</p>}
+                      {(!selectableRooms || selectableRooms.length === 0) && <p className="text-xs text-slate-500">{t("staff.noRooms")}</p>}
                     </div>
                   </div>
 
                   <Button type="submit" disabled={createMutation.isPending} className="w-full bg-indigo-500 hover:bg-indigo-600 text-white mt-4">
                     {createMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <UserPlus className="h-4 w-4 mr-2" />}
-                    Provision Account
+                    {t("staff.provisionAccount")}
                   </Button>
                 </form>
               </CardContent>
@@ -272,8 +275,8 @@ export default function StaffManagementPage() {
             {currentUserRole === "owner" && (
               <Card className="bg-white border-slate-200 shadow-sm">
                 <CardHeader>
-                  <CardTitle className="text-xl text-slate-900">Create Room</CardTitle>
-                  <CardDescription className="text-slate-500">Add a new department or branch (e.g. Doctors).</CardDescription>
+                  <CardTitle className="text-xl text-slate-900">{t("staff.createRoom")}</CardTitle>
+                  <CardDescription className="text-slate-500">{t("staff.createRoomDesc")}</CardDescription>
                 </CardHeader>
                 <CardContent>
                   <form
@@ -293,29 +296,29 @@ export default function StaffManagementPage() {
                     {roomSuccess && (
                       <Alert className="bg-green-500/10 border-green-500/20 text-green-400 p-3">
                         <CheckCircle2 className="h-4 w-4" />
-                        <AlertDescription className="text-xs">Room created successfully.</AlertDescription>
+                        <AlertDescription className="text-xs">{t("staff.roomCreated")}</AlertDescription>
                       </Alert>
                     )}
                     <div className="space-y-2">
-                      <label className="text-xs font-medium text-slate-700">Room Name</label>
+                      <label className="text-xs font-medium text-slate-700">{t("staff.roomName")}</label>
                       <Input
                         required
-                        placeholder="e.g. Doctors"
+                        placeholder={t("staff.phRoom")}
                         value={roomFormData.name}
                         onChange={(e) => setRoomFormData({ ...roomFormData, name: e.target.value })}
                         className="bg-slate-50 border-slate-200 text-slate-900"
                       />
                     </div>
                     <div className="space-y-2">
-                      <label className="text-xs font-medium text-slate-700">Room Type</label>
+                      <label className="text-xs font-medium text-slate-700">{t("staff.roomType")}</label>
                       <Select value={roomFormData.type} onValueChange={(val) => setRoomFormData({ ...roomFormData, type: val || "branch" })}>
                         <SelectTrigger className="bg-slate-50 border-slate-200 text-slate-900">
-                          <SelectValue placeholder="Select type" />
+                          <SelectValue placeholder={t("staff.selectType")} />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="branch">Branch</SelectItem>
-                          <SelectItem value="department">Department</SelectItem>
-                          <SelectItem value="founder">Founder</SelectItem>
+                          <SelectItem value="branch">{t("staff.typeBranch")}</SelectItem>
+                          <SelectItem value="department">{t("staff.typeDepartment")}</SelectItem>
+                          <SelectItem value="founder">{t("staff.typeFounder")}</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
@@ -325,9 +328,9 @@ export default function StaffManagementPage() {
                       className="w-full bg-indigo-500 hover:bg-indigo-600 text-white mt-2"
                     >
                       {createRoomMutation.isPending ? (
-                        <><Loader2 className="h-4 w-4 animate-spin mr-2" />Creating…</>
+                        <><Loader2 className="h-4 w-4 animate-spin mr-2" />{t("staff.creating")}</>
                       ) : (
-                        "Create Room"
+                        t("staff.createRoom")
                       )}
                     </Button>
                   </form>
@@ -339,11 +342,11 @@ export default function StaffManagementPage() {
           {/* Right Column (Active Staff Directory) */}
           <Card className="lg:col-span-2 bg-white border-slate-200 shadow-sm flex flex-col h-[calc(100vh-6rem)] sticky top-8">
             <CardHeader className="shrink-0">
-              <CardTitle className="text-xl text-slate-900">Active Staff Directory</CardTitle>
-              <CardDescription className="text-slate-500">All users currently in the system.</CardDescription>
+              <CardTitle className="text-xl text-slate-900">{t("staff.directory")}</CardTitle>
+              <CardDescription className="text-slate-500">{t("staff.directoryDesc")}</CardDescription>
               <div className="mt-4">
                 <Input
-                  placeholder="Search by name, ID, email, phone, or NID/Birth Certificate..."
+                  placeholder={t("staff.searchPlaceholder")}
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="bg-slate-50 border-slate-200 text-slate-900"
@@ -378,17 +381,17 @@ export default function StaffManagementPage() {
                           )}
                           {user.has_penalty && (
                             <span className="text-[10px] bg-red-500 text-white font-bold px-1.5 py-0.5 rounded flex items-center gap-1 uppercase tracking-wider">
-                              <AlertCircle className="w-3 h-3" /> Penalty
+                              <AlertCircle className="w-3 h-3" /> {t("staff.penalty")}
                             </span>
                           )}
                         </div>
                         <p className="text-sm text-slate-500 truncate">{user.email}</p>
-                        
+
                         {/* Display phone, NID, and joining date */}
                         <div className="text-xs text-slate-500 mt-1.5 flex flex-wrap gap-x-4 gap-y-1">
                           {user.phone && <span className="flex items-center gap-1">📞 {user.phone}</span>}
-                          {user.nid && <span className="flex items-center gap-1">🪪 NID/Cert: {user.nid}</span>}
-                          {user.joining_date && <span className="flex items-center gap-1">📅 Hired: {user.joining_date}</span>}
+                          {user.nid && <span className="flex items-center gap-1">🪪 {t("staff.nidCertShort")}: {user.nid}</span>}
+                          {user.joining_date && <span className="flex items-center gap-1">📅 {t("staff.hired")}: {user.joining_date}</span>}
                         </div>
 
                         {user.has_penalty && user.penalty_reasons?.length > 0 && (
@@ -403,15 +406,15 @@ export default function StaffManagementPage() {
                       </div>
                       <div className="flex items-center gap-3 flex-shrink-0">
                         <span className="bg-white px-3 py-1 rounded-md text-xs font-medium capitalize text-slate-600 border border-slate-200 shadow-sm inline-block">
-                          {getRoleLabel(user.role)}
+                          {roleLabel(user.role)}
                         </span>
                         {(currentUserRole === "owner" || 
                           (currentUserRole === "manager" && user.role !== "owner" && user.role !== "manager" && user.id !== currentUser?.id)) && (
                           <div className="flex gap-1 border-l border-slate-200 pl-3">
-                            <button onClick={() => handleEditClick(user)} className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-md transition-colors" title="Edit User">
+                            <button onClick={() => handleEditClick(user)} className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-md transition-colors" title={t("staff.editUser")}>
                               <Edit2 className="w-4 h-4" />
                             </button>
-                            <button onClick={() => { if(confirm("Are you sure you want to delete this user? This cannot be undone.")) { deleteMutation.mutate(user.id) } }} className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-md transition-colors" title="Delete User">
+                            <button onClick={() => { if(confirm(t("staff.deleteConfirm"))) { deleteMutation.mutate(user.id) } }} className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-md transition-colors" title={t("staff.deleteUser")}>
                               <Trash2 className="w-4 h-4" />
                             </button>
                           </div>
@@ -432,56 +435,56 @@ export default function StaffManagementPage() {
         <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
             <div className="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50 shrink-0">
-              <h3 className="font-semibold text-slate-900">Edit Staff Account</h3>
+              <h3 className="font-semibold text-slate-900">{t("staff.editStaffAccount")}</h3>
               <button onClick={() => setEditingUser(null)}><X className="w-5 h-5 text-slate-400 hover:text-slate-600" /></button>
             </div>
             <div className="p-6 overflow-y-auto custom-scrollbar">
               <div className="space-y-4">
                 <div className="space-y-2">
-                  <label className="text-xs font-medium text-slate-700">Full Name</label>
+                  <label className="text-xs font-medium text-slate-700">{t("staff.fullName")}</label>
                   <Input value={editFormData.name} onChange={(e) => setEditFormData({...editFormData, name: e.target.value})} className="bg-slate-50" />
                 </div>
                 <div className="space-y-2">
-                  <label className="text-xs font-medium text-slate-700">Email Address</label>
+                  <label className="text-xs font-medium text-slate-700">{t("staff.emailAddress")}</label>
                   <Input type="email" value={editFormData.email} onChange={(e) => setEditFormData({...editFormData, email: e.target.value})} className="bg-slate-50" />
                 </div>
                 <div className="space-y-2">
-                  <label className="text-xs font-medium text-slate-700">New Password (leave blank to keep current)</label>
-                  <Input type="text" placeholder="New password" value={editFormData.password} onChange={(e) => setEditFormData({...editFormData, password: e.target.value})} className="bg-slate-50" />
+                  <label className="text-xs font-medium text-slate-700">{t("staff.newPasswordBlank")}</label>
+                  <Input type="text" placeholder={t("staff.newPasswordPlaceholder")} value={editFormData.password} onChange={(e) => setEditFormData({...editFormData, password: e.target.value})} className="bg-slate-50" />
                 </div>
                 <div className="space-y-2">
-                  <label className="text-xs font-medium text-slate-700">Role</label>
+                  <label className="text-xs font-medium text-slate-700">{t("staff.role")}</label>
                   <Select value={editFormData.role} onValueChange={(val) => setEditFormData({...editFormData, role: val || ""})}>
-                    <SelectTrigger className="bg-slate-50"><SelectValue placeholder="Select role" /></SelectTrigger>
+                    <SelectTrigger className="bg-slate-50"><SelectValue placeholder={t("staff.selectRole")} /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="therapist">Therapist</SelectItem>
+                      <SelectItem value="therapist">{t("role.therapist")}</SelectItem>
                       {currentUserRole === "owner" && (
                         <>
-                          <SelectItem value="manager">Branch Manager</SelectItem>
-                          <SelectItem value="hr">HR</SelectItem>
-                          <SelectItem value="executive">Executive</SelectItem>
-                          <SelectItem value="head_of_business">Head of Business Service &amp; Relationship</SelectItem>
+                          <SelectItem value="manager">{t("role.manager")}</SelectItem>
+                          <SelectItem value="hr">{t("role.hr")}</SelectItem>
+                          <SelectItem value="executive">{t("role.executive")}</SelectItem>
+                          <SelectItem value="head_of_business">{t("role.head_of_business")}</SelectItem>
                         </>
                       )}
-                      <SelectItem value="it_team">IT Support</SelectItem>
-                      <SelectItem value="cleaner">Cleaner</SelectItem>
+                      <SelectItem value="it_team">{t("role.it_team")}</SelectItem>
+                      <SelectItem value="cleaner">{t("role.cleaner")}</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
                 <div className="space-y-2">
-                  <label className="text-xs font-medium text-slate-700">Phone Number</label>
+                  <label className="text-xs font-medium text-slate-700">{t("staff.phone")}</label>
                   <Input value={editFormData.phone} onChange={(e) => setEditFormData({...editFormData, phone: e.target.value})} className="bg-slate-50" />
                 </div>
                 <div className="space-y-2">
-                  <label className="text-xs font-medium text-slate-700">NID / Birth Certificate Number</label>
+                  <label className="text-xs font-medium text-slate-700">{t("staff.nid")}</label>
                   <Input value={editFormData.nid} onChange={(e) => setEditFormData({...editFormData, nid: e.target.value})} className="bg-slate-50" />
                 </div>
                 <div className="space-y-2">
-                  <label className="text-xs font-medium text-slate-700">Joining Date</label>
+                  <label className="text-xs font-medium text-slate-700">{t("staff.joiningDate")}</label>
                   <Input value={editFormData.joining_date} onChange={(e) => setEditFormData({...editFormData, joining_date: e.target.value})} className="bg-slate-50" />
                 </div>
                 <div className="space-y-2">
-                  <label className="text-xs font-medium text-slate-700">Assign to Branch(es)</label>
+                  <label className="text-xs font-medium text-slate-700">{t("staff.assignBranches")}</label>
                   <div className="border border-slate-200 bg-slate-50 rounded-md p-3 max-h-48 overflow-y-auto space-y-2">
                     {selectableRooms?.map((r: any) => (
                       <label key={r.id} className="flex items-center gap-2 cursor-pointer text-sm text-slate-700">
@@ -499,7 +502,7 @@ export default function StaffManagementPage() {
                         {r.name} ({r.type})
                       </label>
                     ))}
-                    {(!selectableRooms || selectableRooms.length === 0) && <p className="text-xs text-slate-500">No rooms available.</p>}
+                    {(!selectableRooms || selectableRooms.length === 0) && <p className="text-xs text-slate-500">{t("staff.noRooms")}</p>}
                   </div>
                 </div>
                 
@@ -519,7 +522,7 @@ export default function StaffManagementPage() {
                     updateMutation.mutate({ id: editingUser.id, payload });
                   }}
                 >
-                  {updateMutation.isPending ? "Saving..." : "Save Changes"}
+                  {updateMutation.isPending ? t("common.saving") : t("staff.saveChanges")}
                 </Button>
               </div>
             </div>

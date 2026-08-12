@@ -9,10 +9,13 @@ import { useEffect, Fragment } from "react";
 import { supabase } from "@/lib/supabase";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useRouter } from "next/navigation";
+import { useT } from "@/lib/i18n";
+import { formatDhakaDateTime } from "@/lib/utils";
 
 export default function NotificationsPage() {
   const queryClient = useQueryClient();
   const router = useRouter();
+  const t = useT();
 
   const {
     data,
@@ -75,7 +78,7 @@ export default function NotificationsPage() {
           <div className="p-4 md:p-6 border-b border-slate-200 bg-white sticky top-0 z-10">
             <h2 className="text-xl font-bold flex items-center gap-2 text-slate-800">
               <Bell className="w-6 h-6 text-indigo-500" />
-              Notifications
+              {t("notif.title")}
             </h2>
           </div>
           <div className="divide-y divide-slate-100 animate-pulse">
@@ -97,7 +100,7 @@ export default function NotificationsPage() {
   if (status === "error") {
     return (
       <div className="flex-1 flex flex-col items-center justify-center text-red-500 bg-slate-50">
-        <p>Error loading notifications</p>
+        <p>{t("notif.errorLoading")}</p>
       </div>
     );
   }
@@ -118,7 +121,7 @@ export default function NotificationsPage() {
           {allNotifications.length === 0 ? (
             <div className="p-12 text-center text-slate-500 flex flex-col items-center">
               <Bell className="w-12 h-12 text-slate-200 mb-4" />
-              <p>You have no notifications yet.</p>
+              <p>{t("notif.noneYet")}</p>
             </div>
           ) : (
             allNotifications.map((notif: any) => (
@@ -134,14 +137,14 @@ export default function NotificationsPage() {
                     {notif.message}
                   </p>
                   <p className="text-xs text-slate-400 mt-2 font-medium">
-                    {new Date(notif.created_at.endsWith("Z") || notif.created_at.includes("+") ? notif.created_at : notif.created_at + "Z").toLocaleString()}
+                    {formatDhakaDateTime(notif.created_at)}
                   </p>
                 </div>
                 {!notif.is_read && (
                   <button 
                     onClick={(e) => { e.stopPropagation(); markReadMutation.mutate(notif.id); }}
                     className="text-emerald-500 hover:text-emerald-600 transition-colors self-center p-2 rounded-full hover:bg-emerald-50 active:scale-95"
-                    title="Mark as read"
+                    title={t("notif.markRead")}
                   >
                     <CheckCircle2 className="w-6 h-6" />
                   </button>
@@ -165,7 +168,7 @@ export default function NotificationsPage() {
               ) : (
                 <ChevronDown className="w-4 h-4 mr-2" />
               )}
-              {isFetchingNextPage ? "Loading more..." : "Load More"}
+              {isFetchingNextPage ? t("notif.loadingMore") : t("notif.loadMore")}
             </Button>
           </div>
         )}
