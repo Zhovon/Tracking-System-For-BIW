@@ -736,30 +736,28 @@ function DashboardContent() {
                           <span className="hidden sm:inline">{t("tickets.approve")}</span>
                         </Button>
                       )}
-                    {!isSelectedTicketUniversal && (
-                      selectedTicket.status !== "resolved" ? (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="text-emerald-600 border-emerald-200 hover:bg-emerald-50 h-8 text-xs px-3"
-                          onClick={() => updateTicketMutation.mutate({ status: "resolved" })}
-                          disabled={updateTicketMutation.isPending}
-                        >
-                          <CheckCircle2 className="w-3.5 h-3.5 mr-1 md:mr-1.5" />
-                          <span className="hidden sm:inline">{t("tickets.resolve")}</span>
-                        </Button>
-                      ) : (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="text-amber-600 border-amber-200 hover:bg-amber-50 h-8 text-xs px-3"
-                          onClick={() => updateTicketMutation.mutate({ status: "open" })}
-                          disabled={updateTicketMutation.isPending}
-                        >
-                          <RotateCcw className="w-3.5 h-3.5 mr-1 md:mr-1.5" />
-                          <span className="hidden sm:inline">{t("tickets.reopen")}</span>
-                        </Button>
-                      )
+                    {selectedTicket.status !== "resolved" ? (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="text-emerald-600 border-emerald-200 hover:bg-emerald-50 h-8 text-xs px-3"
+                        onClick={() => updateTicketMutation.mutate({ status: "resolved" })}
+                        disabled={updateTicketMutation.isPending}
+                      >
+                        <CheckCircle2 className="w-3.5 h-3.5 mr-1 md:mr-1.5" />
+                        <span className="hidden sm:inline">{t("tickets.resolve")}</span>
+                      </Button>
+                    ) : (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="text-amber-600 border-amber-200 hover:bg-amber-50 h-8 text-xs px-3"
+                        onClick={() => updateTicketMutation.mutate({ status: "open" })}
+                        disabled={updateTicketMutation.isPending}
+                      >
+                        <RotateCcw className="w-3.5 h-3.5 mr-1 md:mr-1.5" />
+                        <span className="hidden sm:inline">{t("tickets.reopen")}</span>
+                      </Button>
                     )}
                   </div>
                 </div>
