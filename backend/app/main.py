@@ -93,6 +93,15 @@ app.include_router(users_router, prefix="/api/v1/users", tags=["users"])
 app.include_router(rooms_router, prefix="/api/v1/rooms", tags=["rooms"])
 app.include_router(notifications_router, prefix="/api/v1/notifications", tags=["notifications"])
 
+# Compatibility mounts at the root (no /api/v1 prefix). The deployed frontend
+# calls these paths directly (NEXT_PUBLIC_API_URL was set without the /api/v1
+# suffix), so serve them here too. Harmless once the frontend env is corrected —
+# the /api/v1 routes above remain the canonical ones.
+app.include_router(tickets_router, prefix="/tickets", tags=["tickets"])
+app.include_router(users_router, prefix="/users", tags=["users"])
+app.include_router(rooms_router, prefix="/rooms", tags=["rooms"])
+app.include_router(notifications_router, prefix="/notifications", tags=["notifications"])
+
 
 @app.get("/")
 def root():
